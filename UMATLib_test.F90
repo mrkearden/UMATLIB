@@ -131,14 +131,14 @@
 !  6) Write output file 1.0=yes, 7) element number to write (-1.0) is all)
 !------------------------------------------------------------------------------
     ! Local variables:
-    INTEGER :: i,iwrite,ielw
+    INTEGER :: i,iwrite,ielw,done
     REAL(KIND=dp) :: nu, E, E2, LambdaLame, MuLame
     LOGICAL :: exists
     REAl(KIND=dp) :: mises, term1, term2, term3, term4, eprinmax, eprinmin
-    REAL(KIND=dp) :: elastrain,plastrain,elastress,plastress,tresca
-    real(kind=dp) :: edprinmax,edprinmin,sprinmax,sprinmin
+    REAL(KIND=dp) :: elastrain(ntens),plastrain(ntens),elastress(ntens),plastress(ntens),tresca
+    real(kind=dp) :: edprinmax,edprinmin,sprinmax,sprinmin,tempstran
     real(kind=dp) :: strain1,stressc1,strain2,stressc2,term
-    REAL(KIND=dp) :: Stresselas1(ntens),stressplas(ntens)
+    REAL(KIND=dp) :: totstrain(ntens),totstress(ntens)
     REAL(KIND=dp) :: dstranelas(NTENS),dstranpla(ntens)
 !------------------------------------------------------------------------------
 
@@ -168,51 +168,87 @@
     mises = sqrt(stress(1)**2-stress(1)*stress(2)+stress(2)**2+3.*stress(4)**2)
     if (mises.gt.stressc1) then
 !
-!   calculate elastic strain, plastic, strain, total strain, 
+!   calculate elastic strain, plastic strain, total strain, 
 !   increment of elastic strain, increment of plastic strain,
 !   elastic stress, plastic stress, total stress, and set E to new value
-    do i=1,ntens
-    if (stran(i).gt.strain1) then
+!
+!  output time, E, elastic strain, plastic strain, total strain, elastic stress,
+!  plastic stress, total stress (principal and mises)
+!
+do i=1,ntens
+    done=0
+    tempstran=stran(i)+dstran(i)
+    if (tempstran.le.strain1) then
+     E=E
+     elastrain(i)=tempstran
+     plastrain(i)=0.0
+     totstrain(i)=tempstran
+     dstranelas(i)=dstran(i)
+     dstranplas(i)=0.0
+     elastress(i)=tempstran*e
+     plastress(i)=0.0
+     totstress(i)=elastress(i)+totstress(i)
+     done=1
+! dstran is set
+    endif
+   if (stran(i).gt.strain1) then
+     E=E2
+     elastrain(i)=strain1
+     plastrain(i)=tempstran-strain1
+     totstrain(i)=tempstran
      dstranelas(i)=0.0
      dstranplas(i)=dstran(i)
-     E=E2
+     elastress(i)=tempstrain*e
+     plastress(i)=plastrain(i)*E2
+     totstress(i)=elastress(i)+totstress(i)
+     done=2
+! dstran is set
     endif
-   if (iwrite.eq.1) then
-    if (noel.eq.ielw) then
-      Write(*,fmt='(a9,Es13.6)') " Mises = ",mises
-      write(*,fmt='(a10,Es13.6)') " Stressc1:",stressc1
-      write(*,fmt='(a5,Es13.6)') " E =",E
+! If done < 1 then dstran is on the change of slope
+! split change of stress to elastic and plastic part
+    if (done.eq.0) then
+    elastrain(i)=strain1
+    plastrain(i)=tempstrain-strain1
+    totalstrain(i)=tempstran
+    dstranelas(i)=strain1-stran(i)
+    dstranplas(i)=tempstrain-stran1
+    elastress(i)=stressc1
+    plastress(i)=plastrain(i)*E2
+    totstress(i)=elastress(i)+totstress(i)
+    done=3
+! dstran is split between elas and plas
     endif
-   endif
-!
+END DO
+
+if (done.lt3) then 
     LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
     MuLame = E / (2.0d0 * (1.0d0 + nu))
     ddsdde = 0.0d0
     ddsdde(1:ndi,1:ndi) = LambdaLame
-    DO i=1,ntens
-     
+         
       ddsdde(i,i) = ddsdde(i,i) + MuLame
        
-    END DO
     DO i=1,ndi
       ddsdde(i,i) = ddsdde(i,i) + MuLame
     END DO
-!      write(93,fmt='(10a13)') "     TIME    ","   ELEMENT   ","  INT POINT  ",&
-!     "  STRAN "," DSTRAN  "," DDSDDE "
-    !
-    ! We have a linear response function, so the following update is precise
-    ! (no higher-order terms related to the notion of differentiability).
-    ! Note that we could also define
-    !
-    !        stress = stress_response_function(stran + dstran)
-    ! or
-    !        stress = stress_response_function(dfrgrd1)
-    !
-    ! which may be the precise definition of the functionality required. 
 
-     stress = stress + MATMUL(ddsdde,dstran)
-!     stress(3)=0.0
-!     stress1 = stress + MATMUL(ddsdde,dstran1)
+    stress = stress + MATMUL(ddsdde,dstran)
+endif
+if (done.gt.3) then
+    LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+    MuLame = E / (2.0d0 * (1.0d0 + nu))
+    ddsdde = 0.0d0
+    ddsdde(1:ndi,1:ndi) = LambdaLame
+         
+      ddsdde(i,i) = ddsdde(i,i) + MuLame
+       
+    DO i=1,ndi
+      ddsdde(i,i) = ddsdde(i,i) + MuLame
+    END DO
+
+    stress = stress + MATMUL(ddsdde,dstranelas) + MATMUL(ddsdde,dstranplas)
+endif
+
 !    
 !    Calculate invariants 
      term1 = (stran(1)+stran(2))/2.
