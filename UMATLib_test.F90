@@ -1,4 +1,4 @@
-﻿!------------------------------------------------------------------------------
+!------------------------------------------------------------------------------
   SUBROUTINE bi_linear(STRESS, STATEV, DDSDDE, SSE, SPD, SCD, &
        rpl, ddsddt, drplde, drpldt, STRAN, DSTRAN, TIME, DTIME, TEMP, dTemp, &
        predef, dpred, CMNAME, NDI, NSHR, NTENS, NSTATEV, PROPS, NPROPS, &
@@ -70,7 +70,7 @@
     ! Temperature before the time/load increment
 
     REAL(KIND=dp), INTENT(IN) :: dtemp
-    ! Temperature increment associated wíth the time/load increment. Currently
+    ! Temperature increment associated w�th the time/load increment. Currently
     ! Elmer assumes isothermal conditions during the load increment.
 
     REAL(KIND=dp), INTENT(IN) :: predef(1), dpred(1)
@@ -137,14 +137,14 @@
 !  6) Write output file 1.0=yes, 7) element number to write (-1.0) is all)
 !------------------------------------------------------------------------------
     ! Local variables:
-    INTEGER :: i,iwrite,ielw,done
+    INTEGER :: i,iwrite,ielw,done(ntens)
     REAL(KIND=dp) :: nu, E, E2, LambdaLame, MuLame
     LOGICAL :: exists
     REAl(KIND=dp) :: mises, term1, term2, term3, term4, elaeprinmax, elaeprinmin
     REAL(KIND=dp) :: plaeprinmax,plaeprinmin,plasprinmax,plasprinmin, elamises, plamises
     REAL(KIND=dp) :: elastrain(ntens),plastrain(ntens),elastress(ntens),plastress(ntens),tresca
-    real(kind=dp) :: edprinmax,edprinmin,elasprinmax,elasprinmin,tempstran,tempxstran
-    real(kind=dp) :: strain1,stressc1,strain2,stressc2,term
+    real(kind=dp) :: edprinmax,edprinmin,elasprinmax,elasprinmin,tempstran(ntens)
+    real(kind=dp) :: strain1,stressc1,strain2,stressc2,term,eprint(ntens)
     REAL(KIND=dp) :: totstrain(ntens),totstress(ntens)
     REAL(KIND=dp) :: dstranelas(NTENS),dstranplas(ntens)
 !------------------------------------------------------------------------------
@@ -165,6 +165,9 @@
 !  DSTRAN could be spanning the change in slope done = 3
 !  could be negative done = 0
 !  start ntens do loop
+!
+!  for each ntens calculate ddsdde
+!
 do i=1,ntens
 !
 ! reset variables for next ntens
@@ -172,11 +175,12 @@ do i=1,ntens
 !
 ! If dstran is negative not doing unloading or compression
 !
+    ddsdde = 0.0d0
     E = Props(3)/Props(2)
     E2 = Props(5)/Props(4)
-    done=0
-    tempstran=stran(i)+dstran(i)
-    tempxstran=stran(1)+dstran(1)
+    eprint(i)=E
+    done(i)=0
+    tempstran(i)=stran(i)+dstran(i)
 !
 ! start main if positive strain
 !
@@ -191,7 +195,14 @@ if (dstran(i).ge.0.0) then
      elastress(i)=elastrain(i)*E
      plastress(i)=plastrain(i)*E2
      totstress(i)=elastress(i)+plastress(i)
-     done=1
+     done(i)=1
+     eprint(i)=E
+     LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+     MuLame = E / (2.0d0 * (1.0d0 + nu))
+
+     ddsdde(1:ndi,1:ndi) = LambdaLame
+     ddsdde(i,i) = ddsdde(i,i) + MuLame
+    
     endif
 
    if (stran(i).gt.strain1) then
@@ -203,48 +214,59 @@ if (dstran(i).ge.0.0) then
      elastress(i)=elastrain(i)*E
      plastress(i)=plastrain(i)*E2
      totstress(i)=elastress(i)+plastress(i)
-     done=2
+     done(i)=2
+     eprint(i)=E2
+     LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+     MuLame = E2 / (2.0d0 * (1.0d0 + nu))
+
+     ddsdde(1:ndi,1:ndi) = LambdaLame
+     ddsdde(i,i) = ddsdde(i,i) + MuLame
     endif
 
     if ((tempstran.gt.strain1).and.(stran(i).lt.strain1)) then
-    elastrain(i)=strain1
-    plastrain(i)=tempstran-strain1
-    totstrain(i)=tempstran
-    dstranelas(i)=strain1-stran(i)
-    dstranplas(i)=tempstran-strain1
+     elastrain(i)=strain1
+     plastrain(i)=tempstran-strain1
+     totstrain(i)=tempstran
+     dstranelas(i)=strain1-stran(i)
+     dstranplas(i)=tempstran-strain1
      elastress(i)=elastrain(i)*E
      plastress(i)=plastrain(i)*E2
      totstress(i)=elastress(i)+plastress(i)
-    done=3
+     done(i)=3
+     eprint(i)=E2
+     LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+     MuLame = E2 / (2.0d0 * (1.0d0 + nu))
+
+     ddsdde(1:ndi,1:ndi) = LambdaLame
+     ddsdde(i,i) = ddsdde(i,i) + MuLame
     endif
 !
 !  main else if dstran is negative
 !
 else
-     elastrain(i)=tempstran
+     elastrain(i)=tempstran(i)
      plastrain(i)=0.0
-     totstrain(i)=tempstran
+     totstrain(i)=tempstran(i)
      dstranelas(i)=dstran(i)
      dstranplas(i)=0.0
      elastress(i)=elastrain(i)*E
      plastress(i)=plastrain(i)*E2
      totstress(i)=elastress(i)+plastress(i)
-     done=0
+     done(i)=0
+     eprint(i)=E
+     LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+     MuLame = E / (2.0d0 * (1.0d0 + nu))
+
+     ddsdde(1:ndi,1:ndi) = LambdaLame
+     ddsdde(i,i) = ddsdde(i,i) + MuLame
 !
 ! end main if
 !
 end if  
 END DO
 
-if (done.eq.0) then 
-   LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
-    MuLame = E / (2.0d0 * (1.0d0 + nu))
-
-    ddsdde = 0.0d0
-    ddsdde(1:ndi,1:ndi) = LambdaLame
-    DO i=1,ntens
-      ddsdde(i,i) = ddsdde(i,i) + MuLame
-    END DO
+if (done.lt.3) 
+        
     DO i=1,ndi
       ddsdde(i,i) = ddsdde(i,i) + MuLame
     END DO
@@ -252,39 +274,7 @@ if (done.eq.0) then
     stress = stress + MATMUL(ddsdde,dstran)
 endif
 
-if (done.eq.1) then 
-   LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
-    MuLame = E / (2.0d0 * (1.0d0 + nu))
-
-    ddsdde = 0.0d0
-    ddsdde(1:ndi,1:ndi) = LambdaLame
-    DO i=1,ntens
-      ddsdde(i,i) = ddsdde(i,i) + MuLame
-    END DO
-    DO i=1,ndi
-      ddsdde(i,i) = ddsdde(i,i) + MuLame
-    END DO
-
-    stress = stress + MATMUL(ddsdde,dstran)
-endif
-
-if (done.eq.2) then 
-   LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
-    MuLame = E2 / (2.0d0 * (1.0d0 + nu))
-
-    ddsdde = 0.0d0
-    ddsdde(1:ndi,1:ndi) = LambdaLame
-    DO i=1,ntens
-      ddsdde(i,i) = ddsdde(i,i) + MuLame
-    END DO
-    DO i=1,ndi
-      ddsdde(i,i) = ddsdde(i,i) + MuLame
-    END DO
-
-    stress = stress + MATMUL(ddsdde,dstran)
-endif
-
-if (done.ge.3) then
+if (done.ge.3) then !! dstran is over change in slope
     LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
     MuLame = E / (2.0d0 * (1.0d0 + nu))
     ddsdde = 0.0d0
@@ -347,13 +337,13 @@ endif
 
        if (ielw.lt.0) then
 
-!        write(92,*) ' Time Element IntPnt  E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
+!        write(90,*) ' Time Element IntPnt  E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
 !        TotPrin ElasMisis PlasMises TotMises (max then min prins)'
-        write(92,fmt='(f8.3,3x,i7,6x,i7,3x,10(1x,eS12.5))') time(1)+dtime,noel,npt,E,elaeprinmax,&
-        plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
-        elamises,plamises,mises
-
-!        write(92,fmt='(f8.3,3x,i7,6x,i7,3x,10(1x,eS12.5))') time(1),noel,npt,E,elaeprinmin,&
+!        write(90,fmt='(f8.3,3x,i7,6x,i7,3x,10(1x,eS12.5))') time(1)+dtime,noel,npt,E,elaeprinmax,&
+!        plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
+!        elamises,plamises,mises
+!
+!        write(90,fmt='(f8.3,3x,i7,6x,i7,3x,10(1x,eS12.5))') time(1),noel,npt,E,elaeprinmin,&
 !        plaeprinmin,elaeprinmin+plaeprinmin,elasprinmin,plasprinmin,elasprinmin+plasprinmin,&
 !       elamises,plamises,mises
 
@@ -361,23 +351,26 @@ endif
        
         if ((noel.eq.ielw).and.(npt.eq.5)) then
        
- !        write(92,*) ' Time Element IntPnt done E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
- !       TotPrin ElasMisis PlasMises TotMises (max then min prins)'
-        write(92,fmt='(f8.3,1x,i7,1x,i7,es12.5,1x,i1,1x,9(1x,eS12.5))') time(1)+dtime,noel,npt,E,done,elaeprinmax,&
+ !      write(90,*) ' Time Element IntPnt done E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
+ !      TotPrin ElasMisis PlasMises TotMises (max then min prins)'
+        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmax,&
         plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
         elamises,plamises,mises
-         
-         write(93,fmt='(6(es12.5,1x))') time(1)+dtime,dstran(1),Dstran(2),dstran(3),dstran(4),tempxstran
-         write(93,fmt='(6(es12.5,1x))') time(1)+dtime,stran(1),stran(2),stran(3),stran(4),tempxstran
-
- !       write(92,fmt='(f8.3,3x,i7,6x,i7,3x,10(1x,eS12.5))') time(1),noel,npt,E,elaeprinmin,&
- !       plaeprinmin,elaeprinmin+plaeprinmin,elasprinmin,plasprinmin,elasprinmin+plasprinmin,&
- !       elamises,plamises,mises
+        
+        do j=1,ntens
+         iunit=90+j 
+         write(iunit,fmt='(es12.5,1x,i1,1x,5(es12.5,1x))') time(1)+dtime,done(i),eprint(i),dstran(j),stran(j),&
+         tempstran(j),stress(j)
+        end do
+ 
        
         endif
        endif
     endif
-  
+!
+! write plot file
+!
+  write(89,fmt='(es12.5,a1,es12.5,a1,es12.5)') time(1)+dtime,",",elaeprinmax+plaeprinmax,",",mises
 !------------------------------------------------------------------------------
   END SUBROUTINE bi_linear
 !------------------------------------------------------------------------------
