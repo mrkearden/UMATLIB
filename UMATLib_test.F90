@@ -1,9 +1,15 @@
-!------------------------------------------------------------------------------
+﻿!------------------------------------------------------------------------------
   SUBROUTINE bi_linear(STRESS, STATEV, DDSDDE, SSE, SPD, SCD, &
        rpl, ddsddt, drplde, drpldt, STRAN, DSTRAN, TIME, DTIME, TEMP, dTemp, &
        predef, dpred, CMNAME, NDI, NSHR, NTENS, NSTATEV, PROPS, NPROPS, &
        coords, drot, pnewdt, celent, DFRGRD0, DFRGRD1, NOEL, NPT, layer, kspt, &
        kstep, kinc)
+!------------------------------------------------------------------------------
+!
+! Bi-linear plastic material model for 2D elements 
+! 7 Props input nu,strain at yield,yield stress, second strain point,stress,
+! write data option, element data to write (-1 = all)
+!
 !------------------------------------------------------------------------------
     USE Types
     IMPLICIT NONE
@@ -134,18 +140,18 @@
     INTEGER :: i,iwrite,ielw,done
     REAL(KIND=dp) :: nu, E, E2, LambdaLame, MuLame
     LOGICAL :: exists
-    REAl(KIND=dp) :: mises, term1, term2, term3, term4, eprinmax, eprinmin
+    REAl(KIND=dp) :: mises, term1, term2, term3, term4, elaeprinmax, elaeprinmin
+    REAL(KIND=dp) :: plaeprinmax,plaeprinmin,plasprinmax,plasprinmin, elamises, plamises
     REAL(KIND=dp) :: elastrain(ntens),plastrain(ntens),elastress(ntens),plastress(ntens),tresca
-    real(kind=dp) :: edprinmax,edprinmin,sprinmax,sprinmin,tempstran
+    real(kind=dp) :: edprinmax,edprinmin,elasprinmax,elasprinmin,tempstran,tempxstran
     real(kind=dp) :: strain1,stressc1,strain2,stressc2,term
     REAL(KIND=dp) :: totstrain(ntens),totstress(ntens)
-    REAL(KIND=dp) :: dstranelas(NTENS),dstranpla(ntens)
+    REAL(KIND=dp) :: dstranelas(NTENS),dstranplas(ntens)
 !------------------------------------------------------------------------------
 
     ! Get Young's modulus and the Poisson ratio:
     E = Props(3)/Props(2)
     E2 = Props(5)/Props(4)
-!   write(*,*) E2
     nu = Props(1)
     iwrite = int(Props(6))
     ielw = int(Props(7))
@@ -153,88 +159,132 @@
     stressc1 = Props(3)
     strain2 = Props(4)
     stressc2 = Props(5)
-    if (iwrite.eq.1) then
-     if (noel.eq.ielw) then
-      Write(*,fmt='(a5,Es13.6)') " E = ",E
-      write(*,fmt='(a5,Es13.6)') " E2 =",E2
-      Write(*,*) "stress xx     stress yy    stress  xy"
-      write(*,fmt='(3(1x,Es13.6))') stress(1),stress(2),stress(4)
-     endif
-    endif
- 
 !
-! check to see if mises over yield
-!
-    mises = sqrt(stress(1)**2-stress(1)*stress(2)+stress(2)**2+3.*stress(4)**2)
-    if (mises.gt.stressc1) then
-!
-!   calculate elastic strain, plastic strain, total strain, 
-!   increment of elastic strain, increment of plastic strain,
-!   elastic stress, plastic stress, total stress, and set E to new value
-!
-!  output time, E, elastic strain, plastic strain, total strain, elastic stress,
-!  plastic stress, total stress (principal and mises)
-!
+!  Could be on first slope done = 1
+!  Could be on second slope done = 2
+!  DSTRAN could be spanning the change in slope done = 3
+!  could be negative done = 0
+!  start ntens do loop
 do i=1,ntens
+!
+! reset variables for next ntens
+!
+!
+! If dstran is negative not doing unloading or compression
+!
+    E = Props(3)/Props(2)
+    E2 = Props(5)/Props(4)
     done=0
     tempstran=stran(i)+dstran(i)
+    tempxstran=stran(1)+dstran(1)
+!
+! start main if positive strain
+!
+if (dstran(i).ge.0.0) then
+!
     if (tempstran.le.strain1) then
-     E=E
      elastrain(i)=tempstran
      plastrain(i)=0.0
      totstrain(i)=tempstran
      dstranelas(i)=dstran(i)
      dstranplas(i)=0.0
-     elastress(i)=tempstran*e
-     plastress(i)=0.0
-     totstress(i)=elastress(i)+totstress(i)
+     elastress(i)=elastrain(i)*E
+     plastress(i)=plastrain(i)*E2
+     totstress(i)=elastress(i)+plastress(i)
      done=1
-! dstran is set
     endif
+
    if (stran(i).gt.strain1) then
-     E=E2
      elastrain(i)=strain1
      plastrain(i)=tempstran-strain1
      totstrain(i)=tempstran
      dstranelas(i)=0.0
      dstranplas(i)=dstran(i)
-     elastress(i)=tempstrain*e
+     elastress(i)=elastrain(i)*E
      plastress(i)=plastrain(i)*E2
-     totstress(i)=elastress(i)+totstress(i)
+     totstress(i)=elastress(i)+plastress(i)
      done=2
-! dstran is set
     endif
-! If done < 1 then dstran is on the change of slope
-! split change of stress to elastic and plastic part
-    if (done.eq.0) then
+
+    if ((tempstran.gt.strain1).and.(stran(i).lt.strain1)) then
     elastrain(i)=strain1
-    plastrain(i)=tempstrain-strain1
-    totalstrain(i)=tempstran
+    plastrain(i)=tempstran-strain1
+    totstrain(i)=tempstran
     dstranelas(i)=strain1-stran(i)
-    dstranplas(i)=tempstrain-stran1
-    elastress(i)=stressc1
-    plastress(i)=plastrain(i)*E2
-    totstress(i)=elastress(i)+totstress(i)
+    dstranplas(i)=tempstran-strain1
+     elastress(i)=elastrain(i)*E
+     plastress(i)=plastrain(i)*E2
+     totstress(i)=elastress(i)+plastress(i)
     done=3
-! dstran is split between elas and plas
     endif
+!
+!  main else if dstran is negative
+!
+else
+     elastrain(i)=tempstran
+     plastrain(i)=0.0
+     totstrain(i)=tempstran
+     dstranelas(i)=dstran(i)
+     dstranplas(i)=0.0
+     elastress(i)=elastrain(i)*E
+     plastress(i)=plastrain(i)*E2
+     totstress(i)=elastress(i)+plastress(i)
+     done=0
+!
+! end main if
+!
+end if  
 END DO
 
-if (done.lt3) then 
-    LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+if (done.eq.0) then 
+   LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
     MuLame = E / (2.0d0 * (1.0d0 + nu))
+
     ddsdde = 0.0d0
     ddsdde(1:ndi,1:ndi) = LambdaLame
-         
+    DO i=1,ntens
       ddsdde(i,i) = ddsdde(i,i) + MuLame
-       
+    END DO
     DO i=1,ndi
       ddsdde(i,i) = ddsdde(i,i) + MuLame
     END DO
 
     stress = stress + MATMUL(ddsdde,dstran)
 endif
-if (done.gt.3) then
+
+if (done.eq.1) then 
+   LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+    MuLame = E / (2.0d0 * (1.0d0 + nu))
+
+    ddsdde = 0.0d0
+    ddsdde(1:ndi,1:ndi) = LambdaLame
+    DO i=1,ntens
+      ddsdde(i,i) = ddsdde(i,i) + MuLame
+    END DO
+    DO i=1,ndi
+      ddsdde(i,i) = ddsdde(i,i) + MuLame
+    END DO
+
+    stress = stress + MATMUL(ddsdde,dstran)
+endif
+
+if (done.eq.2) then 
+   LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+    MuLame = E2 / (2.0d0 * (1.0d0 + nu))
+
+    ddsdde = 0.0d0
+    ddsdde(1:ndi,1:ndi) = LambdaLame
+    DO i=1,ntens
+      ddsdde(i,i) = ddsdde(i,i) + MuLame
+    END DO
+    DO i=1,ndi
+      ddsdde(i,i) = ddsdde(i,i) + MuLame
+    END DO
+
+    stress = stress + MATMUL(ddsdde,dstran)
+endif
+
+if (done.ge.3) then
     LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
     MuLame = E / (2.0d0 * (1.0d0 + nu))
     ddsdde = 0.0d0
@@ -245,57 +295,89 @@ if (done.gt.3) then
     DO i=1,ndi
       ddsdde(i,i) = ddsdde(i,i) + MuLame
     END DO
+    stress = stress + MATMUL(ddsdde,dstranelas) 
 
-    stress = stress + MATMUL(ddsdde,dstranelas) + MATMUL(ddsdde,dstranplas)
+    LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+    MuLame = E2 / (2.0d0 * (1.0d0 + nu))
+    ddsdde = 0.0d0
+    ddsdde(1:ndi,1:ndi) = LambdaLame
+         
+      ddsdde(i,i) = ddsdde(i,i) + MuLame
+       
+    DO i=1,ndi
+      ddsdde(i,i) = ddsdde(i,i) + MuLame
+    END DO
+    stress = stress + MATMUL(ddsdde,dstranplas)
 endif
-
-!    
+! 
 !    Calculate invariants 
-     term1 = (stran(1)+stran(2))/2.
-     term2 = ((stran(1)-stran(2))/2)**2
-     term3 = (stran(4)/2)**2
-     eprinmax = term1+sqrt(term2+term3)
-     eprinmin = term1-sqrt(term2+term3)
+     term1 = (elastrain(1)+elastrain(2))/2.
+     term2 = ((elastrain(1)-elastrain(2))/2)**2
+     term3 = (elastrain(4)/2)**2
+     elaeprinmax = term1+sqrt(term2+term3)
+     elaeprinmin = term1-sqrt(term2+term3)
 
-     term1 = (dstran(1)+dstran(2))/2.
-     term2 = ((dstran(1)-dstran(2))/2)**2
-     term3 = (dstran(4)/2.)**2
-     edprinmax = term1+sqrt(term2+term3)
-     edprinmin = term1-sqrt(term2+term3)
+     term1 = (plastrain(1)+plastrain(2))/2.
+     term2 = ((plastrain(1)-plastrain(2))/2)**2
+     term3 = (plastrain(4)/2)**2
+     plaeprinmax = term1+sqrt(term2+term3)
+     plaeprinmin = term1-sqrt(term2+term3)
 
-     term=stress(1)+stress(2)
+     term=elastress(1)+elastress(2)
      term1 =  0.5*(term)
-     term=stress(1)-stress(2) 
+     term=elastress(1)-elastress(2) 
      term2 = (0.5*term)**2
      term3 = (stress(4))**2
-     sprinmax = term1+sqrt(term2+term3)
-     sprinmin = term1-sqrt(term2+term3)
+     elasprinmax = term1+sqrt(term2+term3)
+     elasprinmin = term1-sqrt(term2+term3)
 
+     term=plastress(1)+plastress(2)
+     term1 =  0.5*(term)
+     term=plastress(1)-plastress(2) 
+     term2 = (0.5*term)**2
+     term3 = (plastress(4))**2
+     plasprinmax = term1+sqrt(term2+term3)
+     plasprinmin = term1-sqrt(term2+term3)
+
+     elamises = sqrt(elastress(1)**2-elastress(1)*elastress(2)+elastress(2)**2+3.*elastress(4)**2)
+     plamises = sqrt(plastress(1)**2-plastress(1)*plastress(2)+plastress(2)**2+3.*plastress(4)**2)
      mises = sqrt(stress(1)**2-stress(1)*stress(2)+stress(2)**2+3.*stress(4)**2)
-     tresca=0.5*(sprinmax-sprinmin)
      
      if (iwrite.eq.1) then
 
        if (ielw.lt.0) then
- 
-        write(92,fmt='(f8.3,3x,i7,6x,i7,3x,7(1x,eS12.5))') time(1),noel,npt,eprinmax,&
-        eprinmin,edprinmax,tresca,sprinmax,sprinmin,mises
+
+!        write(92,*) ' Time Element IntPnt  E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
+!        TotPrin ElasMisis PlasMises TotMises (max then min prins)'
+        write(92,fmt='(f8.3,3x,i7,6x,i7,3x,10(1x,eS12.5))') time(1)+dtime,noel,npt,E,elaeprinmax,&
+        plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
+        elamises,plamises,mises
+
+!        write(92,fmt='(f8.3,3x,i7,6x,i7,3x,10(1x,eS12.5))') time(1),noel,npt,E,elaeprinmin,&
+!        plaeprinmin,elaeprinmin+plaeprinmin,elasprinmin,plasprinmin,elasprinmin+plasprinmin,&
+!       elamises,plamises,mises
+
        else
        
-        if (noel.eq.ielw) then
- 
-         write(92,fmt='(f8.3,3x,i7,6x,i7,3x,7(1x,eS12.5))') time(1)+dtime,noel,npt,eprinmax+edprinmax,&
-         eprinmin+edprinmin,edprinmax,tresca,sprinmax,sprinmin,mises
+        if ((noel.eq.ielw).and.(npt.eq.5)) then
+       
+ !        write(92,*) ' Time Element IntPnt done E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
+ !       TotPrin ElasMisis PlasMises TotMises (max then min prins)'
+        write(92,fmt='(f8.3,1x,i7,1x,i7,es12.5,1x,i1,1x,9(1x,eS12.5))') time(1)+dtime,noel,npt,E,done,elaeprinmax,&
+        plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
+        elamises,plamises,mises
+         
+         write(93,fmt='(6(es12.5,1x))') time(1)+dtime,dstran(1),Dstran(2),dstran(3),dstran(4),tempxstran
+         write(93,fmt='(6(es12.5,1x))') time(1)+dtime,stran(1),stran(2),stran(3),stran(4),tempxstran
 
-         write(93,fmt='(f8.3,1x,i8,1x,i8,4(1x,ES13.5))') time(1)+dtime,noel,npt,stress(1),stress(2),stress(3),stress(4)
-
+ !       write(92,fmt='(f8.3,3x,i7,6x,i7,3x,10(1x,eS12.5))') time(1),noel,npt,E,elaeprinmin,&
+ !       plaeprinmin,elaeprinmin+plaeprinmin,elasprinmin,plasprinmin,elasprinmin+plasprinmin,&
+ !       elamises,plamises,mises
+       
         endif
        endif
     endif
- 
-    ! So, for this model, the other way to return the stress:
-    !stress = MATMUL(ddsdde,stran+dstran)
-
+  
 !------------------------------------------------------------------------------
   END SUBROUTINE bi_linear
 !------------------------------------------------------------------------------
