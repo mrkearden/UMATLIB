@@ -19,7 +19,8 @@ Do
    goto 6
   endif
 end do
-5 close(10)
+5 write(20,fmt='(f8.4,es12.4,es12.5)') time,strain,stress
+  close(10)
   close(20)
 end
 
