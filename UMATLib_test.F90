@@ -134,10 +134,11 @@
 !
 !  Material Constants 7
 !  1) Density, 2) strain at yield, 3) yield stress, 4)strain at final, 5) stress at final
-!  6) Write output file 1.0=yes, 7) element number to write (-1.0) is all)
+!  6) Write output file 1.0=yes, 7) element number to write (-1.0) is all and all npt)
+!  8) NPT to write (-1.0) for all
 !------------------------------------------------------------------------------
     ! Local variables:
-    INTEGER :: i,iwrite,ielw,done(ntens)
+    INTEGER :: i,iwrite,ielw,done(ntens),iunit,j,istatdone, inpt
     REAL(KIND=dp) :: nu, E, E2, LambdaLame, MuLame
     LOGICAL :: exists
     REAl(KIND=dp) :: mises, term1, term2, term3, term4, elaeprinmax, elaeprinmin
@@ -155,10 +156,12 @@
     nu = Props(1)
     iwrite = int(Props(6))
     ielw = int(Props(7))
+    inpt = int(Props(8))
     strain1 = Props(2)
     stressc1 = Props(3)
     strain2 = Props(4)
     stressc2 = Props(5)
+    ddsdde = 0.0d0
 !
 !  Could be on first slope done = 1
 !  Could be on second slope done = 2
@@ -175,68 +178,74 @@ do i=1,ntens
 !
 ! If dstran is negative not doing unloading or compression
 !
-    ddsdde = 0.0d0
     E = Props(3)/Props(2)
     E2 = Props(5)/Props(4)
     eprint(i)=E
     done(i)=0
+    istatdone=0
     tempstran(i)=stran(i)+dstran(i)
 !
+! in the interration loop? No lots of elements and NPTs
+! if ((noel.eq.ielw).and.(npt.eq.5)) then
+!    write(*,*) time(1),dtime,noel,npt,tempstran(i),Stran(i),dstran(i)
+! endif
 ! start main if positive strain
 !
 if (dstran(i).ge.0.0) then
 !
-    if (tempstran.le.strain1) then
-     elastrain(i)=tempstran
+    if (tempstran(i).le.strain1) then
+     elastrain(i)=tempstran(i)
      plastrain(i)=0.0
-     totstrain(i)=tempstran
+     totstrain(i)=tempstran(i)
      dstranelas(i)=dstran(i)
      dstranplas(i)=0.0
      elastress(i)=elastrain(i)*E
      plastress(i)=plastrain(i)*E2
      totstress(i)=elastress(i)+plastress(i)
+     stress(i)=totstress(i)
      done(i)=1
+     istatdone=1
      eprint(i)=E
      LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
      MuLame = E / (2.0d0 * (1.0d0 + nu))
-
      ddsdde(1:ndi,1:ndi) = LambdaLame
      ddsdde(i,i) = ddsdde(i,i) + MuLame
-    
     endif
 
    if (stran(i).gt.strain1) then
      elastrain(i)=strain1
-     plastrain(i)=tempstran-strain1
-     totstrain(i)=tempstran
+     plastrain(i)=tempstran(i)-strain1
+     totstrain(i)=tempstran(i)
      dstranelas(i)=0.0
      dstranplas(i)=dstran(i)
      elastress(i)=elastrain(i)*E
      plastress(i)=plastrain(i)*E2
      totstress(i)=elastress(i)+plastress(i)
+     stress(i)=totstress(i)
      done(i)=2
+     istatdone=2
      eprint(i)=E2
      LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
      MuLame = E2 / (2.0d0 * (1.0d0 + nu))
-
      ddsdde(1:ndi,1:ndi) = LambdaLame
      ddsdde(i,i) = ddsdde(i,i) + MuLame
     endif
 
-    if ((tempstran.gt.strain1).and.(stran(i).lt.strain1)) then
+    if ((tempstran(i).gt.strain1).and.(stran(i).lt.strain1)) then
      elastrain(i)=strain1
-     plastrain(i)=tempstran-strain1
-     totstrain(i)=tempstran
+     plastrain(i)=tempstran(i)-strain1
+     totstrain(i)=tempstran(i)
      dstranelas(i)=strain1-stran(i)
-     dstranplas(i)=tempstran-strain1
+     dstranplas(i)=tempstran(i)-strain1
      elastress(i)=elastrain(i)*E
      plastress(i)=plastrain(i)*E2
      totstress(i)=elastress(i)+plastress(i)
+     stress(i)=totstress(i)
      done(i)=3
+     istatdone=3
      eprint(i)=E2
      LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
      MuLame = E2 / (2.0d0 * (1.0d0 + nu))
-
      ddsdde(1:ndi,1:ndi) = LambdaLame
      ddsdde(i,i) = ddsdde(i,i) + MuLame
     endif
@@ -252,44 +261,46 @@ else
      elastress(i)=elastrain(i)*E
      plastress(i)=plastrain(i)*E2
      totstress(i)=elastress(i)+plastress(i)
+     stress(i)=totstress(i)
      done(i)=0
+     istatdone=0
      eprint(i)=E
      LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
      MuLame = E / (2.0d0 * (1.0d0 + nu))
-
      ddsdde(1:ndi,1:ndi) = LambdaLame
      ddsdde(i,i) = ddsdde(i,i) + MuLame
 !
 ! end main if
 !
-end if  
+end if 
+ 
 END DO
 
-if (done.lt.3) 
+if (istatdone.lt.3) then 
         
     DO i=1,ndi
       ddsdde(i,i) = ddsdde(i,i) + MuLame
     END DO
+!    stress = stress + MATMUL(ddsdde,dstran)
 
-    stress = stress + MATMUL(ddsdde,dstran)
 endif
 
-if (done.ge.3) then !! dstran is over change in slope
+if (istatdone.ge.3) then
     LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
     MuLame = E / (2.0d0 * (1.0d0 + nu))
     ddsdde = 0.0d0
-    ddsdde(1:ndi,1:ndi) = LambdaLame
+!    ddsdde(1:ndi,1:ndi) = LambdaLame
          
       ddsdde(i,i) = ddsdde(i,i) + MuLame
        
     DO i=1,ndi
       ddsdde(i,i) = ddsdde(i,i) + MuLame
     END DO
-    stress = stress + MATMUL(ddsdde,dstranelas) 
+!    stress = stress + MATMUL(ddsdde,dstranelas) 
 
     LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
     MuLame = E2 / (2.0d0 * (1.0d0 + nu))
-    ddsdde = 0.0d0
+!   ddsdde = 0.0d0
     ddsdde(1:ndi,1:ndi) = LambdaLame
          
       ddsdde(i,i) = ddsdde(i,i) + MuLame
@@ -297,7 +308,11 @@ if (done.ge.3) then !! dstran is over change in slope
     DO i=1,ndi
       ddsdde(i,i) = ddsdde(i,i) + MuLame
     END DO
-    stress = stress + MATMUL(ddsdde,dstranplas)
+!    stress = stress + MATMUL(ddsdde,dstranplas)
+!Do i=1,ntens
+!stress(i)=totstress(i)
+!end do
+
 endif
 ! 
 !    Calculate invariants 
@@ -331,46 +346,55 @@ endif
 
      elamises = sqrt(elastress(1)**2-elastress(1)*elastress(2)+elastress(2)**2+3.*elastress(4)**2)
      plamises = sqrt(plastress(1)**2-plastress(1)*plastress(2)+plastress(2)**2+3.*plastress(4)**2)
-     mises = sqrt(stress(1)**2-stress(1)*stress(2)+stress(2)**2+3.*stress(4)**2)
-     
+     mises = sqrt(totstress(1)**2-totstress(1)*totstress(2)+totstress(2)**2+3.*totstress(4)**2)
+!    if 1     
      if (iwrite.eq.1) then
-
+!      if 2
        if (ielw.lt.0) then
-
-!        write(90,*) ' Time Element IntPnt  E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
-!        TotPrin ElasMisis PlasMises TotMises (max then min prins)'
-!        write(90,fmt='(f8.3,3x,i7,6x,i7,3x,10(1x,eS12.5))') time(1)+dtime,noel,npt,E,elaeprinmax,&
-!        plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
-!        elamises,plamises,mises
-!
-!        write(90,fmt='(f8.3,3x,i7,6x,i7,3x,10(1x,eS12.5))') time(1),noel,npt,E,elaeprinmin,&
-!        plaeprinmin,elaeprinmin+plaeprinmin,elasprinmin,plasprinmin,elasprinmin+plasprinmin,&
-!       elamises,plamises,mises
+       
+        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmax,&
+        plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
+        elamises,plamises,mises
 
        else
-       
-        if ((noel.eq.ielw).and.(npt.eq.5)) then
+!       if 3       
+        if ((noel.eq.ielw).and.(npt.eq.inpt)) then
        
  !      write(90,*) ' Time Element IntPnt done E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
  !      TotPrin ElasMisis PlasMises TotMises (max then min prins)'
         write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmax,&
         plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
         elamises,plamises,mises
-        
+!
+! write plot file if one element and one npt
+!
+       write(89,fmt='(es12.5,a1,es12.5,a1,es12.5)') time(1)+dtime,",",elaeprinmax+plaeprinmax,",",mises
+!
+! write each ntens to a unit of one element and one npt
+!        
         do j=1,ntens
          iunit=90+j 
-         write(iunit,fmt='(es12.5,1x,i1,1x,5(es12.5,1x))') time(1)+dtime,done(i),eprint(i),dstran(j),stran(j),&
+         write(iunit,fmt='(es12.5,1x,i1,1x,5(es12.5,1x))') time(1)+dtime,done(j),eprint(j),dstran(j),stran(j),&
          tempstran(j),stress(j)
+!
         end do
- 
+! 
+!       Else all NPTs
        
+!       end 3
         endif
+
+        if ((noel.eq.ielw).and.(npt.lt.0)) then
+         write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmax,&
+         plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
+         elamises,plamises,mises
+        endif
+
+!      end 2
        endif
+!   end 1
     endif
-!
-! write plot file
-!
-  write(89,fmt='(es12.5,a1,es12.5,a1,es12.5)') time(1)+dtime,",",elaeprinmax+plaeprinmax,",",mises
+
 !------------------------------------------------------------------------------
   END SUBROUTINE bi_linear
 !------------------------------------------------------------------------------
