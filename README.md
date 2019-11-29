@@ -26,7 +26,7 @@ Material 1
   Number of Material Constants = Integer 8
   Number of State Variables = Integer 0
   ! List material constants as {poisson strain1 stress1 strain2 stress2,
-    write output 1 is yes element to write -1=all npt -1=all}:
+  !  write output 1 is yes element to write -1=all npt -1=all}:
   Material Constants(8) = Real 0.3 0.002 57000. 0.162 63025. 1.0 901.0 5.0
   Density = 1.0
   Reference Temperature = 293.0
