@@ -1,0 +1,81 @@
+Header
+  Mesh DB "." "beam"
+End
+
+Constants
+End
+
+Simulation
+  Max Output Level = 5
+  Coordinate System = Cartesian 2D
+!  Simulation Type = Steady State
+  Simulation Type = Scanning 
+  Timestep Intervals = 10
+  Timestep Sizes = .1
+  Output Intervals = 1
+! Output File = "elasticity.result"
+ Post File = "plasticity.vtu"
+End
+
+Body 1
+  Equation = 1
+  Material = 1
+End
+
+Material 1
+  Name = "Material 1"
+  Density = 1
+!  Poisson ratio = .3
+!  Youngs modulus = 70.E9
+  Number of Material Constants = Integer 8
+  Number of State Variables = Integer 0
+  ! List material constants as {poisson strain1 stress1 strain2 stress2,
+  !  write output 1 is yes element to write -1=all npt -1=all}:
+  Material Constants(8) = Real 0.3 .002 1.4E8 .162 1.7E8 1.0 201.0 5.0
+  Reference Temperature = 293.0
+  UMAT Subroutine = File "UMATplastic" "bi_linear"
+  Name = "bi_linear"  ! This specifies the CMNAME argument of UMAT
+
+End
+
+Solver 1
+  Equation = Elasticity Solver
+  Variable = Displacement
+  Variable DOFs = 2
+  Procedure = "ElasticSolve" "ElasticSolver"
+  Linear System Solver = Direct !Iterative
+  Linear System Iterative Method = BiCGStab2
+  Linear System Preconditioning = ILU2
+  Linear System Max Iterations = 1500
+  Linear System Convergence Tolerance = 1.0e-9
+  Linear System Residual Output = 10
+  Nonlinear System Max Iterations = 30
+  Nonlinear System Convergence Tolerance = 1.0e-6
+  Steady State Convergence Tolerance = 1.0e-4
+
+  Calculate Strains = True
+  Calculate Stresses = True
+  Calculate Principal = True
+  Calculate Loads = Logical False
+
+  Large Deflection = True ! Switch to the small strain formulation 
+  Initialize State Variables = Logical False
+
+End
+
+Equation 1
+  Active Solvers(1) = 1
+  Plane Stress = False
+End
+
+Boundary Condition 1
+  Target Boundaries(1) = 4
+  Displacement 1 = 0
+  Displacement 2 = 0
+End
+
+Boundary Condition 2
+  Target Boundaries(1) = 1
+  force 2 = Variable Time; Real MATC "tx*4.E6"
+End
+
