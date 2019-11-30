@@ -6,6 +6,8 @@
        kstep, kinc)
 !------------------------------------------------------------------------------
 !
+! Works for load and stress in XX and YY direction doesn't handle XY very well
+!
 ! Bi-linear plastic material model for 2D elements 
 ! 7 Props input nu,strain at yield,yield stress, second strain point,stress,
 ! write data option, element data to write (-1 = all)
@@ -70,7 +72,7 @@
     ! Temperature before the time/load increment
 
     REAL(KIND=dp), INTENT(IN) :: dtemp
-    ! Temperature increment associated wíth the time/load increment. Currently
+    ! Temperature increment associated wÃ­th the time/load increment. Currently
     ! Elmer assumes isothermal conditions during the load increment.
 
     REAL(KIND=dp), INTENT(IN) :: predef(1), dpred(1)
