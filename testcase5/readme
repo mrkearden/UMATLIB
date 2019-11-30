@@ -1,0 +1,4 @@
+Beam under lateral loading involves XX, YY, and XY
+cantilver 1 unit long beam 0.1 high with end load of 4.E5
+tension side goes plastic at strain of 0.002
+no compressive plasticity as yet.
