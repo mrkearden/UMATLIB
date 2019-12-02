@@ -7,7 +7,7 @@ UMAT files for use in Elmer ElasticSolver.F90.
   
   UMATLib_test.F90 contains a 2D bi-linear plastic material model. Only working for XX and YY tensile, compression is assumed to be non-yielding. 2D elements.
  
-UMAT_Plastic.F90 2D bi-linear plastic material model for XX, YY, XY stress. Tensile yielding only.
+UMAT_Plastic.F90 2D bi-linear plastic material model for XX, YY, XY stress. bi_linear UMAT is Tensile yielding only. bi_linear_sym UMAT assumes the bi-linear model is symetric in compression.
 
 The binary plastic model is input with two sets of strain-stress points yeild is assumed at the first point
 after yielding the stiffness is the slope of the second point relative to the first
