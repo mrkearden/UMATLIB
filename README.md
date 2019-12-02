@@ -19,13 +19,14 @@ full input constants are poisson ratio,strain1,stress1,strain2,stress2,write fla
 1=yes anything else is no, element to write -1=all elements
 integration point to write -1 =all
 
+The 9 state variables are elastic strain,plastic strain,total,elas max prin, plas max prin, total, elas mises, plas mises, total
 Example in the test cases
 Material 1
  Name = "Material 1"
  !  Poisson ratio = 0.3
  !  Youngs modulus = 2.85E7
  Number of Material Constants = Integer 8
- Number of State Variables = Integer 0
+ Number of State Variables = Integer 9
  ! List material constants as {poisson strain1 stress1 strain2 stress2,
  !  write output 1 is yes element to write -1=all npt -1=all}:
  Material Constants(8) = Real 0.3 0.002 57000. 0.162 63025. 1.0 901.0 5.0
