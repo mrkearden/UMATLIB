@@ -1,2 +1,5 @@
 Beam in bending yielding in tension and compresseion using bi_linear_sym.  
 Compression is assumed to be symmetric to the tensile stress stain curve.
+
+Mesh the same as testcase5
+See picture in testcase5 for tensile yielding only
