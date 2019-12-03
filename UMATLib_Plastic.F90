@@ -200,7 +200,7 @@ do i=1,ntens
 ! endif
 ! start main if positive strain
 !
-if (dstran(i).ge.0.0) then
+if (dstran(i).gt.0.0) then
 !
     if (tempstran(i).le.strain1) then
      elastrain(i)=tempstran(i)
@@ -325,14 +325,14 @@ END DO
      stress(j)=totstress(j) 
      end do 
      term1 = (elastrain(1)+elastrain(2))/2.
-     term2 = ((elastrain(1)-elastrain(2))/2)**2
-     term3 = (elastrain(4)/2)**2
+     term2 = ((elastrain(1)-elastrain(2))/2.)**2
+     term3 = (elastrain(4)/2.)**2
      elaeprinmax = term1+sqrt(term2+term3)
      elaeprinmin = term1-sqrt(term2+term3)
 
      term1 = (plastrain(1)+plastrain(2))/2.
-     term2 = ((plastrain(1)-plastrain(2))/2)**2
-     term3 = (plastrain(4)/2)**2
+     term2 = ((plastrain(1)-plastrain(2))/2.)**2
+     term3 = (plastrain(4)/2.)**2
      plaeprinmax = term1+sqrt(term2+term3)
      plaeprinmin = term1-sqrt(term2+term3)
 
@@ -620,7 +620,7 @@ do i=1,ntens
 ! endif
 ! start main if positive strain
 !
-if (dstran(i).ge.0.0) then
+if (dstran(i).gt.0.0) then
 !! DSTRAN is loading if dstran is positive
     if (tempstran(i).le.strain1) then
      elastrain(i)=tempstran(i)
@@ -827,14 +827,14 @@ END DO
      stress(j)=totstress(j) 
      end do 
      term1 = (elastrain(1)+elastrain(2))/2.
-     term2 = ((elastrain(1)-elastrain(2))/2)**2
-     term3 = (elastrain(4)/2)**2
+     term2 = ((elastrain(1)-elastrain(2))/2.)**2
+     term3 = (elastrain(4)/2.)**2
      elaeprinmax = term1+sqrt(term2+term3)
      elaeprinmin = term1-sqrt(term2+term3)
 
      term1 = (plastrain(1)+plastrain(2))/2.
-     term2 = ((plastrain(1)-plastrain(2))/2)**2
-     term3 = (plastrain(4)/2)**2
+     term2 = ((plastrain(1)-plastrain(2))/2.)**2
+     term3 = (plastrain(4)/2.)**2
      plaeprinmax = term1+sqrt(term2+term3)
      plaeprinmin = term1-sqrt(term2+term3)
 
@@ -883,9 +883,11 @@ END DO
        
  !      write(90,*) ' Time Element IntPnt done E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
  !      TotPrin ElasMisis PlasMises TotMises (max then min prins)'
-        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmax,&
-        plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
+        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmin,&
+        plaeprinmin,elaeprinmin+plaeprinmin,elasprinmin,plasprinmin,elasprinmin+plasprinmin,&
         elamises,plamises,mises
+        write(99,fmt='(f8.3,1x,i7,1x,i7,6(1x,eS12.5))') time(1)+dtime,noel,npt,elastrain(1),&
+        plastrain(1),elastrain(1)+plastrain(1),elastress(1),plastress(1),elastress(1)+plastress(1)
 !
 ! write plot file if one element and one npt
 !
