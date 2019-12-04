@@ -213,6 +213,7 @@ if (dstran(i).gt.0.0) then
      eprint(i)=E
      LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
      MuLame = E / (2.0d0 * (1.0d0 + nu))
+     ddsdde=0.0d0
      ddsdde(1:ndi,1:ndi) = LambdaLame
      ddsdde(i,i) = ddsdde(i,i) + MuLame
     DO j=1,ntens
@@ -234,6 +235,7 @@ if (dstran(i).gt.0.0) then
      eprint(i)=E2
      LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
      MuLame = E2 / (2.0d0 * (1.0d0 + nu))
+     ddsdde = 0.0d0
      ddsdde(1:ndi,1:ndi) = LambdaLame
      ddsdde(i,i) = ddsdde(i,i) + MuLame
     DO j=1,ntens
@@ -253,25 +255,14 @@ if (dstran(i).gt.0.0) then
      done(i)=3
      istatdone=3
      eprint(i)=E2
-     LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
-     MuLame = E / (2.0d0 * (1.0d0 + nu))
+     LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+     MuLame = E2 / (2.0d0 * (1.0d0 + nu))
      ddsdde = 0.0d0
      ddsdde(1:ndi,1:ndi) = LambdaLame
-         
      ddsdde(i,i) = ddsdde(i,i) + MuLame
-       
-    DO j=1,ndi
+    DO j=1,ntens
       ddsdde(j,j) = ddsdde(j,j) + MuLame
     END DO
-
-
-    LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
-    MuLame = E2 / (2.0d0 * (1.0d0 + nu))
-!   ddsdde = 0.0d0
-    ddsdde(1:ndi,1:ndi) = LambdaLame
-         
-      ddsdde(i,i) = ddsdde(i,i) + MuLame
-       
     DO j=1,ndi
       ddsdde(j,j) = ddsdde(j,j) + MuLame
     END DO
@@ -649,6 +640,7 @@ if (dstran(i).gt.0.0) then
      done(i)=1
      istatdone=1
      eprint(i)=E
+     ddsdde=0.0d0
      LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
      MuLame = E / (2.0d0 * (1.0d0 + nu))
      ddsdde(1:ndi,1:ndi) = LambdaLame
@@ -673,6 +665,7 @@ if (dstran(i).gt.0.0) then
      eprint(i)=E2
      LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
      MuLame = E2 / (2.0d0 * (1.0d0 + nu))
+     ddsdde=0.0d0
      ddsdde(1:ndi,1:ndi) = LambdaLame
      ddsdde(i,i) = ddsdde(i,i) + MuLame
     DO j=1,ntens
@@ -692,25 +685,14 @@ if (dstran(i).gt.0.0) then
      done(i)=3
      istatdone=3
      eprint(i)=E2
-     LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
-     MuLame = E / (2.0d0 * (1.0d0 + nu))
-     ddsdde = 0.0d0
+     LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+     MuLame = E2 / (2.0d0 * (1.0d0 + nu))
+     ddsdde=0.0d0
      ddsdde(1:ndi,1:ndi) = LambdaLame
-         
      ddsdde(i,i) = ddsdde(i,i) + MuLame
-       
-    DO j=1,ndi
+    DO j=1,ntens
       ddsdde(j,j) = ddsdde(j,j) + MuLame
     END DO
-
-
-    LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
-    MuLame = E2 / (2.0d0 * (1.0d0 + nu))
-!   ddsdde = 0.0d0
-    ddsdde(1:ndi,1:ndi) = LambdaLame
-         
-      ddsdde(i,i) = ddsdde(i,i) + MuLame
-       
     DO j=1,ndi
       ddsdde(j,j) = ddsdde(j,j) + MuLame
     END DO
@@ -734,6 +716,7 @@ if (tempstran(i).lt.0.0) then
      eprint(i)=E
      LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
      MuLame = E / (2.0d0 * (1.0d0 + nu))
+     ddsdde=0.0d0
      ddsdde(1:ndi,1:ndi) = LambdaLame
      ddsdde(i,i) = ddsdde(i,i) + MuLame
     DO j=1,ntens
@@ -755,6 +738,7 @@ if (tempstran(i).lt.0.0) then
      eprint(i)=E2
      LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
      MuLame = E2 / (2.0d0 * (1.0d0 + nu))
+     ddsdde=0.0
      ddsdde(1:ndi,1:ndi) = LambdaLame
      ddsdde(i,i) = ddsdde(i,i) + MuLame
     DO j=1,ntens
@@ -774,25 +758,15 @@ if (tempstran(i).lt.0.0) then
      done(i)=7
      istatdone=7
      eprint(i)=E2
-     LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
-     MuLame = E / (2.0d0 * (1.0d0 + nu))
-     ddsdde = 0.0d0
+ 
+     LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+     MuLame = E2 / (2.0d0 * (1.0d0 + nu))
+     ddsdde=0.0
      ddsdde(1:ndi,1:ndi) = LambdaLame
-         
      ddsdde(i,i) = ddsdde(i,i) + MuLame
-       
-    DO j=1,ndi
+    DO j=1,ntens
       ddsdde(j,j) = ddsdde(j,j) + MuLame
     END DO
-
-
-    LambdaLame = E2 * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
-    MuLame = E2 / (2.0d0 * (1.0d0 + nu))
-!   ddsdde = 0.0d0
-    ddsdde(1:ndi,1:ndi) = LambdaLame
-         
-      ddsdde(i,i) = ddsdde(i,i) + MuLame
-       
     DO j=1,ndi
       ddsdde(j,j) = ddsdde(j,j) + MuLame
     END DO
@@ -924,9 +898,9 @@ END DO
  
  !      write(90,*) ' Time Element IntPnt done E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
  !      TotPrin ElasMisis PlasMises TotMises (max then min prins)'
-        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(10),&
+        write(90,fmt='(f8.3,3(1x,i3),9(1x,eS12.5))') astatev(16),noel,npt,ndi,astatev(10),&
         astatev(11),astatev(12),astatev(13),astatev(14),astatev(15),astatev(7),astatev(8),astatev(9)
-        write(91,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(1),&
+        write(91,fmt='(f8.3,3(1x,i3),9(1x,eS12.5))') astatev(16),noel,npt,ndi,astatev(1),&
         astatev(2),astatev(3),astatev(4),astatev(5),astatev(6),astatev(7),astatev(8),astatev(9)
        
          
