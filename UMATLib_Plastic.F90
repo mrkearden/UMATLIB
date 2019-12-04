@@ -142,14 +142,14 @@
     ! Local variables:
     INTEGER :: i,iwrite,ielw,done(ntens),iunit,j,istatdone, inpt
     REAL(KIND=dp) :: nu, E, E2, LambdaLame, MuLame, G, G2
-    LOGICAL :: exists
+    LOGICAL :: exists,f1exist,f2exist
     REAl(KIND=dp) :: mises, term1, term2, term3, term4, elaeprinmax, elaeprinmin
     REAL(KIND=dp) :: plaeprinmax,plaeprinmin,plasprinmax,plasprinmin, elamises, plamises
     REAL(KIND=dp) :: elastrain(ntens),plastrain(ntens),elastress(ntens),plastress(ntens),tresca
     real(kind=dp) :: edprinmax,edprinmin,elasprinmax,elasprinmin,tempstran(ntens)
     real(kind=dp) :: strain1,stressc1,strain2,stressc2,term,eprint(ntens)
     REAL(KIND=dp) :: totstrain(ntens),totstress(ntens)
-    REAL(KIND=dp) :: dstranelas(NTENS),dstranplas(ntens)
+    REAL(KIND=dp) :: dstranelas(NTENS),dstranplas(ntens),astatev(16)
 !------------------------------------------------------------------------------
 
     ! Get Young's modulus and the Poisson ratio:
@@ -356,67 +356,91 @@ END DO
      plamises = sqrt(plastress(1)**2-plastress(1)*plastress(2)+plastress(2)**2+3.*plastress(4)**2)
      mises = sqrt(totstress(1)**2-totstress(1)*totstress(2)+totstress(2)**2+3.*totstress(4)**2)
 
-     statev(1)=elaeprinmax
-     statev(2)=plaeprinmax
-     statev(3)=elasprinmax+plaeprinmax
-     statev(4)=elasprinmax
-     statev(5)=plasprinmax
-     statev(6)=elasprinmax+plasprinmax
-     statev(7)=elamises
-     statev(8)=plamises
-     statev(9)=mises
+     astatev(1)=elaeprinmax
+     astatev(2)=plaeprinmax
+     astatev(3)=elaeprinmax+plaeprinmax
+     astatev(4)=elasprinmax
+     astatev(5)=plasprinmax
+     astatev(6)=elasprinmax+plasprinmax
+     astatev(7)=elamises
+     astatev(8)=plamises
+     astatev(9)=mises
+     astatev(10)=elaeprinmin
+     astatev(11)=plaeprinmin
+     astatev(12)=elaeprinmin+plaeprinmin
+     astatev(13)=elasprinmin
+     astatev(14)=plasprinmin
+     astatev(15)=elasprinmin+plasprinmin
+     astatev(16)=time(1)
 
 !    if 1     
      if (iwrite.eq.1) then
+     inquire(file="maxprindata.txt",EXIST=f1exist)
+     inquire(file="minprindata.txt",EXIST=f2exist)
+     if(.not.f2exist) then
+      open(unit=90,file="minprindata.txt",status='new',recl=145)
+      write(90,*) '  Time   Element  IntPnt  ElasStrain  PlasStrain   TotStrain    ElasPrin     PlasPrin    &
+  TotPrin       ElasMisis    PlasMises   TotMises'  
+     endif
+     if(.not.f1exist) then
+      open(unit=91,file="maxprindata.txt",status='new',recl=145)
+      write(91,*) '  Time   Element  IntPnt  ElasStrain  PlasStrain   TotStrain    ElasPrin     PlasPrin    &
+  TotPrin       ElasMisis    PlasMises   TotMises'  
+     endif
+
+
 !      if 2
        if (ielw.lt.0) then
        
-        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmax,&
-        plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
-        elamises,plamises,mises
+        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(10),&
+        astatev(11),astatev(12),astatev(13),astatev(14),astatev(15),astatev(7),astatev(8),astatev(9)
+        write(91,fmt='(f8.3,1x,i7,1x,i7,6(1x,eS12.5))') astatev(16),noel,npt,astatev(1),&
+        astatev(2),astatev(3),astatev(4),astatev(5),astatev(6),astatev(7),astatev(8),astatev(9)
 
        else
 !       if 3       
         if ((noel.eq.ielw).and.(npt.eq.inpt)) then
-       
+ 
  !      write(90,*) ' Time Element IntPnt done E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
  !      TotPrin ElasMisis PlasMises TotMises (max then min prins)'
-        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmax,&
-        plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
-        elamises,plamises,mises
-!
-! write plot file if one element and one npt
-!
-       write(89,fmt='(es12.5,a1,es12.5,a1,es12.5)') time(1)+dtime,",",elaeprinmax+plaeprinmax,",",mises
-!
+        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(10),&
+        astatev(11),astatev(12),astatev(13),astatev(14),astatev(15),astatev(7),astatev(8),astatev(9)
+        write(91,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(1),&
+        astatev(2),astatev(3),astatev(4),astatev(5),astatev(6),astatev(7),astatev(8),astatev(9)
+       
+         
 ! write each ntens to a unit of one element and one npt
 !        
-        do j=1,ntens
-         iunit=90+j 
-         write(iunit,fmt='(es12.5,1x,i1,1x,5(es12.5,1x))') time(1)+dtime,done(j),eprint(j),dstran(j),stran(j),&
-         tempstran(j),stress(j)
+!        do j=1,ntens
+!         iunit=92+j 
+!         write(iunit,fmt='(es12.5,1x,i1,1x,5(es12.5,1x))') time(1)+dtime,done(j),eprint(j),dstran(j),stran(j),&
+!         tempstran(j),stress(j)
 !
-        end do
-! 
-!       Else all NPTs
+!        end do
        
 !       end 3
         endif
 
         if ((noel.eq.ielw).and.(npt.lt.0)) then
-         write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmax,&
-         plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
-         elamises,plamises,mises
+         write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(10),&
+         astatev(11),astatev(12),astatev(13),astatev(14),astatev(15),astatev(7),astatev(8),astatev(9)
+         write(91,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(1),&
+         astatev(2),astatev(3),astatev(4),astatev(5),astatev(6),astatev(7),astatev(8),astatev(9)
         endif
 
 !      end 2
        endif
 !   end 1
     endif
-
 !------------------------------------------------------------------------------
   END SUBROUTINE bi_linear
 !------------------------------------------------------------------------------
+! The call from ElasticSolve
+!CALL UMATusersubrtn(UMATSubrtn, StressVec(1:ntens), StateV, StressDer(1:ntens,1:ntens), EnergyElast, &
+!          EnergyPlast, EnergyVisc, rpl, ddsddt(1:ntens), drplde(1:ntens), drpldt, &
+!          stran(1:ntens), dstran(1:ntens), TimeAtStep, dtime, Temp, dTemp, &
+!          predef, dpred, cmname, ndi, nshr, ntens, NStateV, InProps, NrInProps, coords, &
+!          drot, pnewdt, celent, DefG0, DefG, ElementIndex, t, layer, kspt, kstep, kinc)
 !------------------------------------------------------------------------------
   SUBROUTINE bi_linear_sym(STRESS, STATEV, DDSDDE, SSE, SPD, SCD, &
        rpl, ddsddt, drplde, drpldt, STRAN, DSTRAN, TIME, DTIME, TEMP, dTemp, &
@@ -562,14 +586,14 @@ END DO
     ! Local variables:
     INTEGER :: i,iwrite,ielw,done(ntens),iunit,j,istatdone, inpt
     REAL(KIND=dp) :: nu, E, E2, LambdaLame, MuLame, G, G2
-    LOGICAL :: exists
+    LOGICAL :: f1exist,f2exist
     REAl(KIND=dp) :: mises, term1, term2, term3, term4, elaeprinmax, elaeprinmin
     REAL(KIND=dp) :: plaeprinmax,plaeprinmin,plasprinmax,plasprinmin, elamises, plamises
     REAL(KIND=dp) :: elastrain(ntens),plastrain(ntens),elastress(ntens),plastress(ntens),tresca
     real(kind=dp) :: edprinmax,edprinmin,elasprinmax,elasprinmin,tempstran(ntens)
     real(kind=dp) :: strain1,stressc1,strain2,stressc2,term,eprint(ntens)
     REAL(KIND=dp) :: totstrain(ntens),totstress(ntens)
-    REAL(KIND=dp) :: dstranelas(NTENS),dstranplas(ntens)
+    REAL(KIND=dp) :: dstranelas(NTENS),dstranplas(ntens),astatev(16)
 !------------------------------------------------------------------------------
 
     ! Get Young's modulus and the Poisson ratio:
@@ -613,13 +637,7 @@ do i=1,ntens
     done(i)=0
     istatdone=0
     tempstran(i)=stran(i)+dstran(i)
-!
-! in the interration loop? No lots of elements and NPTs
-! if ((noel.eq.ielw).and.(npt.eq.5)) then
-!    write(*,*) time(1),dtime,noel,npt,tempstran(i),Stran(i),dstran(i)
-! endif
-! start main if positive strain
-!
+
 if (dstran(i).gt.0.0) then
 !! DSTRAN is loading if dstran is positive
     if (tempstran(i).le.strain1) then
@@ -858,59 +876,77 @@ END DO
      plamises = sqrt(plastress(1)**2-plastress(1)*plastress(2)+plastress(2)**2+3.*plastress(4)**2)
      mises = sqrt(totstress(1)**2-totstress(1)*totstress(2)+totstress(2)**2+3.*totstress(4)**2)
 
-     statev(1)=elaeprinmax
-     statev(2)=plaeprinmax
-     statev(3)=elasprinmax+plaeprinmax
-     statev(4)=elasprinmax
-     statev(5)=plasprinmax
-     statev(6)=elasprinmax+plasprinmax
-     statev(7)=elamises
-     statev(8)=plamises
-     statev(9)=mises
+     astatev(1)=elaeprinmax
+     astatev(2)=plaeprinmax
+     astatev(3)=elaeprinmax+plaeprinmax
+     astatev(4)=elasprinmax
+     astatev(5)=plasprinmax
+     astatev(6)=elasprinmax+plasprinmax
+     astatev(7)=elamises
+     astatev(8)=plamises
+     astatev(9)=mises
+     astatev(10)=elaeprinmin
+     astatev(11)=plaeprinmin
+     astatev(12)=elaeprinmin+plaeprinmin
+     astatev(13)=elasprinmin
+     astatev(14)=plasprinmin
+     astatev(15)=elasprinmin+plasprinmin
+     astatev(16)=time(1)
+
 
 !    if 1     
      if (iwrite.eq.1) then
+     inquire(file="maxprindata.txt",EXIST=f1exist)
+     inquire(file="minprindata.txt",EXIST=f2exist)
+     if(.not.f2exist) then
+      open(unit=90,file="minprindata.txt",status='new',recl=145)
+      write(90,*) '  Time   Element  IntPnt  ElasStrain  PlasStrain   TotStrain    ElasPrin     PlasPrin    &
+  TotPrin       ElasMisis    PlasMises   TotMises'  
+     endif
+     if(.not.f1exist) then
+      open(unit=91,file="maxprindata.txt",status='new',recl=145)
+      write(91,*) '  Time   Element  IntPnt  ElasStrain  PlasStrain   TotStrain    ElasPrin     PlasPrin    &
+  TotPrin       ElasMisis    PlasMises   TotMises'  
+     endif
+
+
 !      if 2
        if (ielw.lt.0) then
        
-        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmax,&
-        plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
-        elamises,plamises,mises
+        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(10),&
+        astatev(11),astatev(12),astatev(13),astatev(14),astatev(15),astatev(7),astatev(8),astatev(9)
+        write(91,fmt='(f8.3,1x,i7,1x,i7,6(1x,eS12.5))') astatev(16),noel,npt,astatev(1),&
+        astatev(2),astatev(3),astatev(4),astatev(5),astatev(6),astatev(7),astatev(8),astatev(9)
 
        else
 !       if 3       
         if ((noel.eq.ielw).and.(npt.eq.inpt)) then
-       
+ 
  !      write(90,*) ' Time Element IntPnt done E  ElasStrain PlasStrain TotStrain ElasPrin ElasPrin &
  !      TotPrin ElasMisis PlasMises TotMises (max then min prins)'
-        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmin,&
-        plaeprinmin,elaeprinmin+plaeprinmin,elasprinmin,plasprinmin,elasprinmin+plasprinmin,&
-        elamises,plamises,mises
-        write(99,fmt='(f8.3,1x,i7,1x,i7,6(1x,eS12.5))') time(1)+dtime,noel,npt,elastrain(1),&
-        plastrain(1),elastrain(1)+plastrain(1),elastress(1),plastress(1),elastress(1)+plastress(1)
-!
-! write plot file if one element and one npt
-!
-       write(89,fmt='(es12.5,a1,es12.5,a1,es12.5)') time(1)+dtime,",",elaeprinmax+plaeprinmax,",",mises
-!
+        write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(10),&
+        astatev(11),astatev(12),astatev(13),astatev(14),astatev(15),astatev(7),astatev(8),astatev(9)
+        write(91,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(1),&
+        astatev(2),astatev(3),astatev(4),astatev(5),astatev(6),astatev(7),astatev(8),astatev(9)
+       
+         
 ! write each ntens to a unit of one element and one npt
 !        
-        do j=1,ntens
-         iunit=90+j 
-         write(iunit,fmt='(es12.5,1x,i1,1x,5(es12.5,1x))') time(1)+dtime,done(j),eprint(j),dstran(j),stran(j),&
-         tempstran(j),stress(j)
+!        do j=1,ntens
+!         iunit=92+j 
+!         write(iunit,fmt='(es12.5,1x,i1,1x,5(es12.5,1x))') time(1)+dtime,done(j),eprint(j),dstran(j),stran(j),&
+!         tempstran(j),stress(j)
 !
-        end do
-! 
-!       Else all NPTs
+!        end do
        
 !       end 3
         endif
 
         if ((noel.eq.ielw).and.(npt.lt.0)) then
-         write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') time(1)+dtime,noel,npt,elaeprinmax,&
-         plaeprinmax,elaeprinmax+plaeprinmax,elasprinmax,plasprinmax,elasprinmax+plasprinmax,&
-         elamises,plamises,mises
+         write(90,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(10),&
+         astatev(11),astatev(12),astatev(13),astatev(14),astatev(15),astatev(7),astatev(8),astatev(9)
+         write(91,fmt='(f8.3,1x,i7,1x,i7,9(1x,eS12.5))') astatev(16),noel,npt,astatev(1),&
+         astatev(2),astatev(3),astatev(4),astatev(5),astatev(6),astatev(7),astatev(8),astatev(9)
         endif
 
 !      end 2
