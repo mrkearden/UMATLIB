@@ -1,0 +1,113 @@
+Header
+  CHECK KEYWORDS Warn
+  Mesh DB "." "mesh"
+  Include Path ""
+  Results Directory ""
+End
+
+Simulation
+  Max Output Level = 5
+  Coordinate System = Cartesian
+  Coordinate Mapping(3) = 1 2 3
+  Simulation Type = Scanning
+  Steady State Max Iterations = 1
+  Output Intervals = 1
+  Timestepping Method = BDF
+  BDF Order = 1
+  Timestep intervals = 50
+  Timestep Sizes = .001
+  Solver Input File = case.sif
+  Post File = umatcase.vtu
+End
+
+Constants
+  Gravity(4) = 0 -1 0 9.82
+  Stefan Boltzmann = 5.67e-08
+  Permittivity of Vacuum = 8.8542e-12
+  Boltzmann Constant = 1.3807e-23
+  Unit Charge = 1.602e-19
+End
+
+Body 1
+  Target Bodies(1) = 1
+  Name = "Body 1"
+  Equation = 1
+  Material = 1
+End
+
+Solver 1
+  Equation = Elasticity Solver
+  Variable = Displacement
+  Variable DOFs = 2
+  Procedure = "ElasticSolve" "ElasticSolver"
+  Linear System Solver = Iterative
+  Linear System Iterative Method = BiCGStab2
+  Linear System Preconditioning = ILU0
+  Linear System Max Iterations = 500
+  Linear System Convergence Tolerance = 1.0e-8
+  Linear System Residual Output = 10
+  Nonlinear System Max Iterations = 30
+  Nonlinear System Convergence Tolerance = 1.0e-5
+  Steady State Convergence Tolerance = 1.0e-4
+
+  Calculate Strains = True
+  Calculate Stresses = True
+  Calculate Loads = Logical False
+
+  Large Deflection = False ! Switch to the small strain formulation 
+  Initialize State Variables = Logical False
+
+End
+
+Solver 2
+Exec Solver = After Timestep
+Equation = SaveScalars
+Procedure = "SaveData" "SaveScalars"
+Output Directory = "/home/titan/fea/coupon"
+Filename = "variables.dat"
+Variable 1 = "Time"
+Operator 1 = dofs
+Variable 2 = "Strain_xx"
+Operator 2 = max
+Variable 3 = "Stress_xx"
+Operator 3 = max
+End
+
+Equation 1
+  Name = "Equation 1"
+  Active Solvers(2) = 1 2
+End
+
+Material 1
+  Name = "Material 1"
+  Density = 1
+!  Poisson ratio = 0.3
+!  Youngs modulus = 2.85E7
+  Number of Material Constants = Integer 8
+  Number of State Variables = Integer 0
+  ! List material constants as {}:
+  Material Constants(8) = Real 0.3 .0039 3.E8 0.020 4.E8 1.0 52.0 5.0
+  Density = 1.0
+  Reference Temperature = 293.0
+  UMAT Subroutine = File "umatmises" "mises_yield"
+  Name = "mises_yield"  ! This specifies the CMNAME argument of UMAT
+
+End
+
+Boundary Condition 1
+  Target Boundaries(1) = 8 
+  Name = "wall"
+  Displacement 1 = 0
+End
+
+Boundary Condition 2
+  Target Boundaries(2) = 2 6 
+  Name = "ysym"
+  Displacement 2 = 0
+End
+
+Boundary Condition 3
+  Target Boundaries(1) = 1 
+  Name = "pull"
+  Displacement 1 = Variable Time; Real MATC tx
+End
