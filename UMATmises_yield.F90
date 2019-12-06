@@ -156,9 +156,18 @@
     stressc2 = Props(5)
 !
 ! check mises
+E=E1
 !
+if (ntens.eq.4) then
  mises = sqrt(stress(1)**2-stress(1)*stress(2)+stress(2)**2+3.*stress(4)**2)
-!
+end if
+if (ntens.eq.6) then
+ term1=(stress(1)-stress(2))**2
+ term2=(stress(2)-stress(3))**2
+ term3=(stress(3)-stress(1))**2
+ term4=6.0*(stress(4)**2+stress(5)**2+stress(6)**2)
+ mises=sqrt(term1+term2+term3+term4)
+endif
 !
 !
 if (mises.gt.props(3)) then
