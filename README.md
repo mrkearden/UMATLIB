@@ -5,7 +5,7 @@ UMAT files for use in Elmer ElasticSolver.F90.
   UMATLib.F90 is the UMATLib provieded with Elmer and contains a linear istropic model
   and a hencky_stvenant_kirchhoff model.
   
-  UMATmises_yield.F90 checks the mises stress for yielding using the first pair of stress strain points
+  UMATmises_yield.F90 (works for 2D and 3D elements) checks the mises stress for yielding using the first pair of stress strain points
 The binary plastic model is input with two sets of strain-stress points yeild is assumed at the first point
 after yielding the stiffness is the slope of the second point relative to the first
 Example
