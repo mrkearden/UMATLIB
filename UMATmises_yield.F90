@@ -205,19 +205,19 @@ LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
     stress = stress + MATMUL(ddsdde,dstran)
     ! So, for this model, the other way to return the stress:
     !stress = MATMUL(ddsdde,stran+dstran)
-       if (ielw.lt.0) then
-       
-       write(20,*) "strain xx",stran(1),"mises:",mises,"stress_xx:",stress(1)," E:",E
-
-       else
-        
-        if ((noel.eq.ielw).and.(npt.eq.inpt)) then
- 
-        write(20,*) "strain xx",stran(1),"mises:",mises,"stress_xx:",stress(1)," E:",E
-        
-        endif
-
-       endif
+!       if (ielw.lt.0) then
+!       
+!       write(20,*) "strain xx",stran(1),"mises:",mises,"stress_xx:",stress(1)," E:",E
+!
+!       else
+!        
+!        if ((noel.eq.ielw).and.(npt.eq.inpt)) then
+! 
+!        write(20,*) "strain xx",stran(1),"mises:",mises,"stress_xx:",stress(1)," E:",E
+!        
+!        endif
+!
+!       endif
 
 !------------------------------------------------------------------------------
   END SUBROUTINE mises_yield
