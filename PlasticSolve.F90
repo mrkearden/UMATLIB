@@ -1308,7 +1308,7 @@ else
     write(*,*) 'Open file and write headers'
          open(unit=40,file="output.txt",status='unknown',recl=145)
 !                  1234561234123123456789012312345678901231234567890123
-      write(40,*) ' Time Elem Ip  Max Prin    Mid Prin    Min Prin      Mises'
+      write(40,*) ' Time Elem Ip  Max Prin     Mid Prin      Min Prin      Mises'
     end select
 end if
 !
@@ -2053,27 +2053,27 @@ end if
       Real eps
       ITER=0
       DO I=1,N
-      DO J=1,N
-      A(I,J)=0.0
-      A(I,I)=1.0
+       DO J=1,N
+        A(I,J)=0.0
+        A(I,I)=1.0
+       end do
+      end do
+    do while (iter.lt.itmax)
       Z=0.
-      end do
-      end do
-      do while (iter.lt.itmax) 
-      NM1=N-1
+      NM1=N-1 
+
       DO I=1,NM1
-      IP1=I+1
-      DO J=IP1,N
-
-      IF (ABS(AO(I,J)) .gt. Z) then
-       Z=ABS(AO(I,J))
-       IROW=I
-       ICOL=J
-      end if
-
+       IP1=I+1
+       DO J=IP1,N
+        IF (ABS(AO(I,J)) .gt. Z) then
+         Z=ABS(AO(I,J))
+         IROW=I
+         ICOL=J
+        end if
+       end do
       end do
-      end do
-    IF (ITER .EQ. 0) Y=Z*EPS
+   
+   IF (ITER .EQ. 0) Y=Z*EPS
  
      IF (Z .ge. Y) then
        DIF=AO(IROW,IROW)-AO(ICOL,ICOL)
@@ -2081,23 +2081,23 @@ end if
        COSE=1.0/SQRT(1.0+TANG**2)
        SINE=COSE*TANG
        DO I=1,N
-       ZZ=A(I,IROW)
-       A(I,IROW)=COSE*ZZ+SINE*A(I,ICOL)
-       A(I,ICOL)=COSE*A(I,ICOL)-SINE*ZZ
+        ZZ=A(I,IROW)
+        A(I,IROW)=COSE*ZZ+SINE*A(I,ICOL)
+        A(I,ICOL)=COSE*A(I,ICOL)-SINE*ZZ
        end do
        I=1
        do while (I .ne. IROW)  
-       YY=AO(I,IROW)
-       AO(I,IROW)=COSE*YY+SINE*AO(I,ICOL)
+        YY=AO(I,IROW)
+        AO(I,IROW)=COSE*YY+SINE*AO(I,ICOL)
+        AO(I,ICOL)=COSE*AO(I,ICOL)-SINE*YY
+        I=I+1
+       end do
+      I=IROW+1
+      do while (I .ne. ICOL) 
+       YY=AO(IROW,I)
+       AO(IROW,I)=COSE*YY+SINE*AO(I,ICOL)
        AO(I,ICOL)=COSE*AO(I,ICOL)-SINE*YY
        I=I+1
-       end do
-       I=IROW+1
-      do while (I .ne. ICOL) 
-      YY=AO(IROW,I)
-      AO(IROW,I)=COSE*YY+SINE*AO(I,ICOL)
-      AO(I,ICOL)=COSE*AO(I,ICOL)-SINE*YY
-      I=I+1
       end do
       I=ICOL+1
       do while (I .le. N)  
@@ -2112,10 +2112,12 @@ AO(ICOL,ICOL)*SINE**2
       AO(ICOL,ICOL)=AO(ICOL,ICOL)*COSE**2+YY*SINE**2-AO(IROW,ICOL)&
 *2.0*COSE*SINE
       AO(IROW,ICOL)=0.0
-      ITER=ITER+1
-    
+      
+   else
+   iter=itmax 
    end if
- end do  
+ iter=iter+1 
+ end do 
  END subroutine jacobi2
 !------------------------------------------------------------------------------
 ! Perform the operation
