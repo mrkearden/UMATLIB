@@ -269,7 +269,7 @@ SUBROUTINE ElasticSolver( Model, Solver, dt, TransientSimulation )
          
   REAL(KIND=dp) :: UNorm, TransformMatrix(3,3), Tdiff, Normal(3), s, UnitNorm, DragCoeff
   REAL(KIND=dp) :: Norm, NonlinTol, NonlinRes0, NonlinRes 
-  Real(KIND=dp) :: Astress(6),AA(3,3),ZZ(3,3)
+  Real(KIND=dp) :: Astress(6),AA(3,3),ZZ(3,3),Astran(6)
   REAl(KIND=dp) :: mises, term1, term2, term3, term4, eprinmax, eprinmin
   REAL(KIND=dp) :: sprinmax,sprinmin,sprinmid
 
@@ -850,14 +850,14 @@ SUBROUTINE ElasticSolver( Model, Solver, dt, TransientSimulation )
                    MaxIntegrationPoints, InitializeStateVars, Density, Damping, AxialSymmetry, &
                    PlaneStress, LargeDeflection, HenckyStrain, CurrentElement, n, nd, ntot, STDOFs, &
                    ElementNodes, LocalDisplacement, PrevLocalDisplacement, LocalTemperature, &
-                   t, Iter, UMATModel,Astress,noel,inpt)
+                   t, Iter, UMATModel,Astress,Astran, noel,inpt)
 !       SUBROUTINE LocalMatrixWithUMAT(MassMatrix, DampMatrix, StiffMatrix, ForceVector, &
 !       ExternalForceVector, dt, LoadVector, InertialLoad, MaterialConstants, &
 !       NrInProps, PointwiseStateV, PointwiseStateV0, NStateV, MaxMaterialPoints, &
 !       InitializeStateVars, NodalDensity, NodalDamping, AxialSymmetry, PlaneStress, &
 !       LargeDeflection, HenckyStrain, Element, n, nd, ntot, dofs, Nodes, NodalDisplacement, &
 !       PrevNodalDisplacement, NodalTemperature, ElementIndex, IterationIndex, &
-!       UMATModel,Astress,noel,inpt)
+!       UMATModel,Astress,Astran, noel,inpt)
               ! ---------------------------------------------------------------------------
               ! Create a RHS vector which contains just the contribution of external loads
               ! for the purpose of nonlinear error estimation:
@@ -1289,7 +1289,7 @@ SUBROUTINE ElasticSolver( Model, Solver, dt, TransientSimulation )
 !
 ! Normal stresses and strains are in the paraview output
 ! Calculate and ouput Principal and Mises for one element one NPT
-! Astress is captured in Call LocalMatrixWithUMAT
+! Astress/Astran is captured in Call LocalMatrixWithUMAT
 ! REAl(KIND=dp) :: mises, term1, term2, term3, term4, eprinmax, eprinmin
 !  REAL(KIND=dp) :: sprinmax,sprinmin
 ! Write(*,*) ' IWRITE ',int(MaterialConstants(8,1))
@@ -1301,14 +1301,31 @@ else
     SELECT CASE(CoordinateSystemDimension())
     case(2)
     write(*,*) 'Open file and write headers'
-         open(unit=40,file="output.txt",status='unknown',recl=145)
+         open(unit=40,file="output_stress.txt",status='unknown',recl=145)
 !                  1234561234123123456789012312345678901231234567890123
       write(40,*) ' Time Elem Ip  Max Prin      Min Prin       Mises'
     case(3)
     write(*,*) 'Open file and write headers'
-         open(unit=40,file="output.txt",status='unknown',recl=145)
+         open(unit=40,file="output_stress.txt",status='unknown',recl=145)
 !                  1234561234123123456789012312345678901231234567890123
       write(40,*) ' Time Elem Ip  Max Prin     Mid Prin      Min Prin      Mises'
+    end select
+end if
+inquire(unit=50, opened=f1exist) 
+if ( f1exist ) then
+    write(*,*) 'File open already'
+else
+    SELECT CASE(CoordinateSystemDimension())
+    case(2)
+    write(*,*) 'Open file and write headers'
+         open(unit=50,file="output_strain.txt",status='unknown',recl=145)
+!                  1234561234123123456789012312345678901231234567890123
+      write(50,*) ' Time Elem Ip  Max Prin      Min Prin       Mises'
+    case(3)
+    write(*,*) 'Open file and write headers'
+         open(unit=50,file="output_strain.txt",status='unknown',recl=145)
+!                  1234561234123123456789012312345678901231234567890123
+      write(50,*) ' Time Elem Ip  Max Prin     Mid Prin      Min Prin      Mises'
     end select
 end if
 !
@@ -1323,12 +1340,23 @@ end if
      Write(40,fmt='(f6.4,i4,i3,3(1x,es13.6))')&
 GetTime(), int(MaterialConstants(7,1)), int(MaterialConstants(8,1)), sprinmax,&
 sprinmin,mises
+     term1=astran(1)-astran(2) 
+     term2 = (0.5*term1)**2
+     term3 = (astran(4))**2
+     sprinmax = term1+sqrt(term2+term3)
+     sprinmin = term1-sqrt(term2+term3)
+     mises = sqrt(astran(1)**2-astran(1)*astran(2)+astran(2)**2+3.*astran(4)**2)
+    Write(50,fmt='(f6.4,i4,i3,3(1x,es13.6))')&
+GetTime(), int(MaterialConstants(7,1)), int(MaterialConstants(8,1)), sprinmax,&
+sprinmin,mises
     CASE(3)
+    write(*,*) ' made it here '
     term1=(astress(1)-astress(2))**2
     term2=(astress(2)-astress(3))**2
     term3=(astress(3)-astress(1))**2
     term4=6.0*(astress(4)**2+astress(5)**2+astress(6)**2)
     mises=sqrt(term1+term2+term3+term4)
+    write(*,*) ' made it past mises '
     AA(1,1)=astress(1)
     AA(2,2)=astress(2)
     AA(3,3)=astress(3)
@@ -1338,11 +1366,33 @@ sprinmin,mises
     AA(2,1)=AA(1,2)
     AA(3,1)=AA(1,3)
     AA(3,2)=AA(2,3)
+    write(*,*) ' calling jacobi '
      call jacobi2(AA,3,ZZ,1.E-6,100)
      sprinmax=AA(1,1)
      sprinmid=AA(2,2)
      sprinmin=AA(3,3)
      Write(40,fmt='(f6.4,i4,i3,4(1x,es13.6))')&
+GetTime(), int(MaterialConstants(7,1)), int(MaterialConstants(8,1)), sprinmax,&
+sprinmid,sprinmin,mises
+    term1=(astran(1)-astran(2))**2
+    term2=(astran(2)-astran(3))**2
+    term3=(astran(3)-astran(1))**2
+    term4=6.0*(astran(4)**2+astran(5)**2+astran(6)**2)
+    mises=sqrt(term1+term2+term3+term4)
+    AA(1,1)=astran(1)
+    AA(2,2)=astran(2)
+    AA(3,3)=astran(3)
+    AA(1,2)=astran(4)
+    AA(1,3)=astran(6)
+    AA(2,3)=astran(5) 
+    AA(2,1)=AA(1,2)
+    AA(3,1)=AA(1,3)
+    AA(3,2)=AA(2,3)
+     call jacobi2(AA,3,ZZ,1.E-6,100)
+     sprinmax=AA(1,1)
+     sprinmid=AA(2,2)
+     sprinmin=AA(3,3)
+     Write(50,fmt='(f6.4,i4,i3,4(1x,es13.6))')&
 GetTime(), int(MaterialConstants(7,1)), int(MaterialConstants(8,1)), sprinmax,&
 sprinmid,sprinmin,mises
     END SELECT
@@ -1379,7 +1429,7 @@ CONTAINS
        InitializeStateVars, NodalDensity, NodalDamping, AxialSymmetry, PlaneStress, &
        LargeDeflection, HenckyStrain, Element, n, nd, ntot, dofs, Nodes, NodalDisplacement, &
        PrevNodalDisplacement, NodalTemperature, ElementIndex, IterationIndex, &
-       UMATModel,Astress,noel,inpt)
+       UMATModel,Astress,Astran,noel,inpt)
 !------------------------------------------------------------------------------
     REAL(KIND=dp) :: MassMatrix(:,:), DampMatrix(:,:), StiffMatrix(:,:)
     REAL(KIND=dp) :: ExternalForceVector(:)
@@ -1423,7 +1473,7 @@ CONTAINS
     REAL(KIND=dp) :: WorkTensor1(3,3), WorkTensor2(3,3), WorkTensor3(3,3)
     REAL(KIND=dp) :: WorkVec1(1:6,1), WorkVec2(1:6,1)
     REAL(KIND=dp) :: s, u, v, w, r
-    real(kind=dp) :: Astress(6)
+    REAL(KIND=dp) :: Astress(6),Astran(6)
 
     INTEGER :: i, j, k, l, p, q, t, dim, cdim, totdofs
 
@@ -1794,6 +1844,7 @@ CONTAINS
 if (ElementIndex.eq.int(InProps(7))) then
   if (t.eq.int(InProps(8))) then
    Astress = StressVec
+   Astran = Stran
 endif
  
 end if
@@ -2048,7 +2099,7 @@ end if
 !     
 !
       SUBROUTINE JACOBI2 (AO,N,A,EPS,ITMAX)
-      Double Precision :: AO(3,3), A(3,3),Z,Y,dif,tang,cose,sine,zz,yy
+      Real(Kind=dp) :: AO(3,3), A(3,3),Z,Y,dif,tang,cose,sine,zz,yy
       Integer iter,i,j,itmax,N,nm1,ip1,irow,icol
       Real eps
       ITER=0
@@ -2058,6 +2109,7 @@ end if
         A(I,I)=1.0
        end do
       end do
+    
     do while (iter.lt.itmax)
       Z=0.
       NM1=N-1 
@@ -2075,7 +2127,7 @@ end if
    
    IF (ITER .EQ. 0) Y=Z*EPS
  
-     IF (Z .ge. Y) then
+     IF (Z .gt. Y) then
        DIF=AO(IROW,IROW)-AO(ICOL,ICOL)
        TANG= (-DIF+SQRT(DIF**2+4.0*Z**2))/(2.0*AO(IROW,ICOL))
        COSE=1.0/SQRT(1.0+TANG**2)
@@ -2116,6 +2168,7 @@ AO(ICOL,ICOL)*SINE**2
    else
    iter=itmax 
    end if
+ 
  iter=iter+1 
  end do 
  END subroutine jacobi2
