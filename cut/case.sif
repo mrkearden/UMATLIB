@@ -1,0 +1,97 @@
+Header
+  CHECK KEYWORDS Warn
+  Mesh DB "." "cut"
+  Include Path ""
+  Results Directory ""
+End
+
+Simulation
+  Max Output Level = 5
+  Coordinate System = Cartesian
+  Coordinate Mapping(3) = 1 2 3
+  Simulation Type = Steady state
+  Steady State Max Iterations = 1
+  Output Intervals = 1
+  Timestepping Method = BDF
+  BDF Order = 1
+  Solver Input File = case.sif
+  Post File = case.vtu
+End
+
+Constants
+  Gravity(4) = 0 -1 0 9.82
+  Stefan Boltzmann = 5.67e-08
+  Permittivity of Vacuum = 8.8542e-12
+  Boltzmann Constant = 1.3807e-23
+  Unit Charge = 1.602e-19
+End
+
+Body 1
+  Target Bodies(1) = 1
+  Name = "Body 1"
+  Equation = 1
+  Material = 1
+End
+
+Solver 1
+  Equation = Nonlinear elasticity
+  Variable = -dofs 2 Displacement
+  Calculate Strains = True
+  Procedure = "ElasticSolve" "ElasticSolver"
+  Calculate Principal = True
+  Calculate Stresses = True
+  Exec Solver = Always
+  Stabilize = True
+  Bubbles = False
+  Lumped Mass Matrix = False
+  Optimize Bandwidth = True
+  Steady State Convergence Tolerance = 1.0e-5
+  Nonlinear System Convergence Tolerance = 1.0e-5
+  Nonlinear System Max Iterations = 30
+  Nonlinear System Newton After Iterations = 3
+  Nonlinear System Newton After Tolerance = 1.0e-3
+  Nonlinear System Relaxation Factor = 1
+  Linear System Solver = Direct !Iterative
+  Linear System Iterative Method = GCR
+  Linear System Max Iterations = 1500
+  Linear System Convergence Tolerance = 1.0e-8
+  BiCGstabl polynomial degree = 2
+  Linear System Preconditioning = ILU0
+  Linear System ILUT Tolerance = 1.0e-3
+  Linear System Abort Not Converged = False
+  Linear System Residual Output = 10
+  Linear System Precondition Recompute = 1
+End
+
+Equation 1
+  Name = "Equation 1"
+  Active Solvers(1) = 1
+End
+
+Material 1
+  Name = "Aluminium (generic)"
+  Heat expansion Coefficient = 23.1e-6
+  Poisson ratio = 0.35
+  Youngs modulus = 70.0e9
+  Heat Conductivity = 237.0
+  Sound speed = 5000.0
+  Heat Capacity = 897.0
+  Mesh Poisson ratio = 0.35
+  Density = 2700.0
+  Poisson ratio = 0.35
+  Youngs modulus = 70.0e9
+End
+
+Boundary Condition 1
+  Target Boundaries(1) = 6 
+  Name = "wall"
+  Displacement 1 = 0
+  Displacement 2 = 0
+End
+
+Boundary Condition 2
+  Target Boundaries(1) = 1 
+  Name = "move"
+  Displacement 1 = 2
+  Displacement 2 = 0
+End
