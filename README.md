@@ -13,8 +13,11 @@ That has prinipal stress and mises for one element and one NPT chosen by the sif
 
 The binary plastic model is input with two sets of strain-stress points yeild is assumed at the first point
 after yielding the stiffness is the slope of the second point relative to the first, Fifth entry is ultimate stress.
+
 Example
+
 0.002 57000. 0.162 63025. 75000.
+
 has a yield of 57000 at a strain 0f 0.002 E=28.5E7 then E=3.89E5 after that
 
 full input constants are poisson ratio,strain1,stress1,strain2,stress2,write flag
