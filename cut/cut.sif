@@ -1,0 +1,101 @@
+Header
+  CHECK KEYWORDS Warn
+  Mesh DB "." "cut"
+  Include Path ""
+  Results Directory ""
+End
+
+Simulation
+  Max Output Level = 5
+  Coordinate System = Cartesian
+  Coordinate Mapping(3) = 1 2 3
+  Simulation Type = Scanning
+  Steady State Max Iterations = 10
+  Timestep intervals = 10
+  Timestep Sizes = .1
+  Output Intervals = 1
+  Timestepping Method = BDF
+  BDF Order = 1
+  Solver Input File = case.sif
+  Post File = case.vtu
+End
+
+Constants
+  Gravity(4) = 0 -1 0 9.82
+  Stefan Boltzmann = 5.67e-08
+  Permittivity of Vacuum = 8.8542e-12
+  Boltzmann Constant = 1.3807e-23
+  Unit Charge = 1.602e-19
+End
+
+Body 1
+  Target Bodies(1) = 1
+  Name = "Body 1"
+  Equation = 1
+  Material = 1
+End
+
+Solver 1
+  Equation = Nonlinear elasticity
+  Variable = -dofs 2 Displacement
+  Calculate Strains = True
+  Procedure = "ElasticSolve" "ElasticSolver"
+  Calculate Principal = True
+  Calculate Stresses = True
+  Exec Solver = Always
+  Stabilize = True
+  Bubbles = False
+  Lumped Mass Matrix = False
+  Optimize Bandwidth = True
+  Steady State Convergence Tolerance = 1.0e-5
+  Nonlinear System Convergence Tolerance = 1.0e-5
+  Nonlinear System Max Iterations = 30
+  Nonlinear System Newton After Iterations = 3
+  Nonlinear System Newton After Tolerance = 1.0e-3
+  Nonlinear System Relaxation Factor = 1
+  Linear System Solver = Direct !Iterative
+  Linear System Iterative Method = GCR
+  Linear System Max Iterations = 1500
+  Linear System Convergence Tolerance = 1.0e-8
+  BiCGstabl polynomial degree = 2
+  Linear System Preconditioning = ILU0
+  Linear System ILUT Tolerance = 1.0e-3
+  Linear System Abort Not Converged = False
+  Linear System Residual Output = 10
+  Linear System Precondition Recompute = 1
+  Output State Variables = True
+End
+
+Equation 1
+  Name = "Equation 1"
+  Active Solvers(1) = 1
+End
+
+Material 1
+  Name = "generic"
+Density = 1.0
+! Elmer also seems to want Poisson
+  Poisson ratio = .3
+! Youngs modulus = 70.E9
+  Number of Material Constants = Integer 6
+  Number of State Variables = Integer 7
+  ! List material constants as {poisson strain1 stress1 strain2 stress2
+  Material Constants(6) = Real 0.3 .25 81.0 1.43 110. 110.0
+  Reference Temperature = 293.0
+  UMAT Subroutine = File "bi_linear" "bi_linear"
+  Name = "bi_linear"  ! This specifies the CMNAME argument of UMAT
+  End
+
+Boundary Condition 1
+  Target Boundaries(1) = 6 
+  Name = "wall"
+  Displacement 1 = 0
+  Displacement 2 = 0
+End
+
+Boundary Condition 2
+  Target Boundaries(1) = 1 
+  Name = "move"
+  Displacement 1 = Variable Time; Real Matc "tx*1.4"
+  Displacement 2 = 0
+End
