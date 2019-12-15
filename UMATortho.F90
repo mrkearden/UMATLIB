@@ -1,5 +1,5 @@
 !------------------------------------------------------------------------------
-  SUBROUTINE bi_linear(STRESS, STATEV, DDSDDE, SSE, SPD, SCD, &
+  SUBROUTINE ortho(STRESS, STATEV, DDSDDE, SSE, SPD, SCD, &
        rpl, ddsddt, drplde, drpldt, STRAN, DSTRAN, TIME, DTIME, TEMP, dTemp, &
        predef, dpred, CMNAME, NDI, NSHR, NTENS, NSTATEV, PROPS, NPROPS, &
        coords, drot, pnewdt, celent, DFRGRD0, DFRGRD1, NOEL, NPT, layer, kspt, &
@@ -127,84 +127,87 @@
     INTEGER, INTENT(IN) :: layer, kspt, kstep, kinc
     ! kstep and kinc could be provided to give information on the incrementation
     ! procedure
-!  Material Constants 5
-!  1) Nu, 2) strain at yield, 3) yield stress, 4)strain at final, 5) stress at final
+!  Material Constants 4
+!  1) Nu, 2) Ex 3) Ey 4)Ez
 !  State Variables 7
 ! 3 prinipal strains, 3 prinipal stress, mises
 !------------------------------------------------------------------------------
     ! Local variables:
-    REAL(KIND=dp) :: nu, E1, E2, LambdaLame, MuLame, G, G1, G2, E
+    REAL(KIND=dp) :: nu, Ex, Ey, G, Gx, Gy, Ez, Gz
+    Real(Kind=dp) :: Lamdax, Lamday, Lamdaz, MuLamex, Mulamey, Mulamez
+    Real(Kind=dp) :: Gamdax, Gamday, Gamdaz, GuLamex, GuLamey, GuLamez
     LOGICAL :: exists,f1exist,f2exist
     REAl(KIND=dp) :: mises, term1, term2, term3, term4, eprinmax, eprinmin
     REAL(KIND=dp) :: eprinmid,sprinmax,sprinmid,sprinmin
     real(kind=dp) :: strain1,stressc1,strain2,stressc2,term
-    REAL(KIND=dp) :: totstran(ntens)
-    Real*8 AA(3,3), ZZ(3,3)
-    integer :: i
+    REAL*8 :: totstran(ntens), Ew(6,6)
+    Real*8 AA(3,3), ZZ(3,3), Emat(6,6), Y(6,6), LambdaLame(6,6), MuLame(6)
+    integer :: i,j
 !------------------------------------------------------------------------------
   ! Get Young's modulus and the Poisson ratio:
-    E1 = Props(3)/Props(2)
-    E2 = (Props(5)-Props(3))/(Props(4)-Props(2))
+    Ex = Props(2)
+    Ey = Props(3)
+    Ez = Props(4)
     
     nu = Props(1)
 
-    G1 = E1/(2*(1+nu))
-    G2 = E2/(2*(1+nu))
+    Gx = Ex/(2*(1+nu))
+    Gy = Ey/(2*(1+nu))
+    Gz = Ez/(2*(1+nu))
+    Emat = 0.0
+    Emat(1,1) = 1./Ex
+    Emat(1,2) = -1.*nu/Ex
+    Emat(1,3) = -1.*nu/Ex
+    Emat(2,1) = -1.*nu/Ey
+    Emat(2,2) = 1./Ey
+    Emat(2,3) = -1.*nu/Ey
+    Emat(3,1) = -1.*nu/Ez
+    Emat(3,2) = -1.*nu/Ez
+    Emat(3,3) = 1./Ez
+    Emat(4,4) = 1./Gx
+    Emat(5,5) = 1./Gy
+    Emat(6,6) = 1./Gz
+    Ew = 0.0
+    Ew(1,1) = Ex
+    Ew(1,2) = nu*Ey
+    Ew(1,3) = nu*Ez
+    Ew(2,1) = nu*Ex
+    Ew(2,2) = Ey
+    Ew(2,3) = nu*Ez
+    Ew(3,1) = nu*Ex
+    Ew(3,2) = nu*Ey
+    Ew(3,3) = Ez
+    Ew(4,4) = Gx
+    Ew(5,5) = Gy
+    Ew(6,6) = Gz
 
-    strain1 = Props(2)
-    stressc1 = Props(3)
-    strain2 = Props(4)
-    stressc2 = Props(5)
-    
-!
-! check mises
-E=E1
-!
-if (ntens.eq.4) then
- mises = sqrt(stress(1)**2-stress(1)*stress(2)+stress(2)**2+3.*stress(4)**2)
-     term1=stress(1)-stress(2) 
-     term2 = (0.5*term1)**2
-     term3 = (stress(4))**2
-     sprinmax = term1+sqrt(term2+term3)
-     sprinmin = term1-sqrt(term2+term3)
-end if
-if (ntens.eq.6) then
- term1=(stress(1)-stress(2))**2
- term2=(stress(2)-stress(3))**2
- term3=(stress(3)-stress(1))**2
- term4=6.0*(stress(4)**2+stress(5)**2+stress(6)**2)
- mises=sqrt((term1+term2+term3+term4)/2)
-endif
-!
-!
-if (mises.gt.props(3)) then
-!
-     E = E2   
-     
-else
-     
-    E = E1
-     
-end if 
-if (mises.gt.props(5)) then
-  E = 0.0
-end if
-!
-!
-LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
-    MuLame = E / (2.0d0 * (1.0d0 + nu))
-
-    ddsdde = 0.0d0
-    ddsdde(1:ndi,1:ndi) = LambdaLame
-    DO i=1,ntens
-      ddsdde(i,i) = ddsdde(i,i) + MuLame
-    END DO
-    DO i=1,ndi
-      ddsdde(i,i) = ddsdde(i,i) + MuLame
-    END DO
-   stress = stress + MATMUL(ddsdde,dstran)
+!   stress = stress + MATMUL(ddsdde,dstran)
+!   stress = MATMUL(ddsdde,stran+dstran)
+!   totstran = Emat*stress
    totstran = stran + dstran
-!
+   stress = MATMUL(Ew,totstran)
+!  call jacobi3(Emat,totstran,stress)
+!  stress = ddsdde*totstran 
+!  ddsdde = stress/totstran 
+!  ddsdde = stress/(Emat*stress) = 1/Emat
+   Do i=1,6
+    Do j=1,6
+     LambdaLame(i,j) = Ew(i,j) * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+    end do
+   end do
+   MuLame(1) = Ew(1,1)/ (2.0d0 * (1.0d0 + nu))
+   MuLame(2) = Ew(2,2)/ (2.0d0 * (1.0d0 + nu))
+   MuLame(3) = Ew(3,3)/ (2.0d0 * (1.0d0 + nu))
+   MuLame(4) = Ew(4,4)/ (2.0d0 * (1.0d0 + nu))
+   MuLame(5) = Ew(5,5)/ (2.0d0 * (1.0d0 + nu))
+   MuLame(6) = Ew(6,6)/ (2.0d0 * (1.0d0 + nu))
+   ddsdde = LambdaLame
+   DO i=1,ntens
+      ddsdde(i,i) = ddsdde(i,i) + MuLame(i)
+    END DO
+   DO i=1,ndi
+      ddsdde(i,i) = ddsdde(i,i) + MuLame(i)
+   END DO
 ! Calculate invariants for statev
 !
 Select case(ntens)
@@ -228,11 +231,11 @@ Select case(ntens)
      statev(6) = sprinmin
      statev(7) = mises
      case(6)
-     term1=(stress(1)-stress(2))**2
+    term1=(stress(1)-stress(2))**2
     term2=(stress(2)-stress(3))**2
     term3=(stress(3)-stress(1))**2
     term4=6.0*(stress(4)**2+stress(5)**2+stress(6)**2)
-    mises=sqrt(term1+term2+term3+term4)
+    mises=sqrt( (term1+term2+term3+term4)/2 )
     AA(1,1)=stress(1)
     AA(2,2)=stress(2)
     AA(3,3)=stress(3)
@@ -268,7 +271,7 @@ Select case(ntens)
      statev(7) = mises
  end select
 !------------------------------------------------------------------------------
-  END SUBROUTINE bi_linear
+  END SUBROUTINE ortho
 !------------------------------------------------------------------------------
 !     
 !
@@ -346,3 +349,40 @@ AO(ICOL,ICOL)*SINE**2
  iter=iter+1 
  end do 
  END subroutine jacobi2
+!     SUBROUTINE FOR SOLVING AX=B USING GAUSS-SEIDEL METHOD
+      SUBROUTINE JACOBI3(A,B,X)
+      Real*8 :: A(6,6),B(6),X(6),XO(6),DIFF,SUM,xnew,check
+      integer i,n,j,nn,max,iter
+      N=6
+      MAX=1000
+      EPSI= 0.000001
+      DO 50 I=1,N
+	  XO(I)=0.0
+50    X(I)=0.0
+      NN=0
+51    DIFF=0.0
+      DO 56 I=1,N
+      SUM=0.0
+      DO 53 J=1,N
+      IF(J-I) 52,53,52
+52    SUM=SUM+A(I,J)*XO(J)
+53    CONTINUE
+      XNEW=(-SUM+B(I))/A(I,I)
+      CHECK=ABS((XO(I)-XNEW)/XNEW)
+      IF(CHECK-DIFF) 55,55,54
+54    DIFF=CHECK
+55    X(I)=XNEW
+56    CONTINUE
+      do i=1,n
+	  XO(I)=X(I)
+	  enddo
+      NN=NN+1
+      IF(NN-MAX) 57,58,58
+57    IF(DIFF-EPSI) 59,59,51
+58    ITER=1
+      MAX=NN
+      RETURN
+59    ITER=0
+      MAX=NN
+      RETURN
+      END
