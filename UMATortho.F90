@@ -134,13 +134,14 @@
 !------------------------------------------------------------------------------
     ! Local variables:
     REAL(KIND=dp) :: nu, Ex, Ey, G, Gx, Gy, Ez, Gz
+    REAL(KIND=dp) :: E, LambdaLame2d, MuLame2d
     Real(Kind=dp) :: Lamdax, Lamday, Lamdaz, MuLamex, Mulamey, Mulamez
     Real(Kind=dp) :: Gamdax, Gamday, Gamdaz, GuLamex, GuLamey, GuLamez
     LOGICAL :: exists,f1exist,f2exist
     REAl(KIND=dp) :: mises, term1, term2, term3, term4, eprinmax, eprinmin
     REAL(KIND=dp) :: eprinmid,sprinmax,sprinmid,sprinmin
     real(kind=dp) :: strain1,stressc1,strain2,stressc2,term
-    REAL*8 :: totstran(ntens), Ew(6,6)
+    REAL*8 :: totstran(ntens), Ew(6,6),Ew2d(4,4), E2d(3,3), stran2d(3),str2d(3)
     Real*8 AA(3,3), ZZ(3,3), Emat(6,6), Y(6,6), LambdaLame(6,6), MuLame(6)
     integer :: i,j
 !------------------------------------------------------------------------------
@@ -154,6 +155,39 @@
     Gx = Ex/(2*(1+nu))
     Gy = Ey/(2*(1+nu))
     Gz = Ez/(2*(1+nu))
+select case(ntens)
+    case(4)
+
+    ! Get Young's modulus and the Poisson ratio:
+    E = Props(2)
+    nu = Props(1)
+    totstran = stran + dstran
+    LambdaLame2d = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
+    MuLame2d = E / (2.0d0 * (1.0d0 + nu))
+
+    ddsdde = 0.0d0
+    ddsdde(1:ndi,1:ndi) = LambdaLame2d
+
+    DO i=1,ntens
+      ddsdde(i,i) = ddsdde(i,i) + MuLame2d
+    END DO
+    DO i=1,ndi
+      ddsdde(i,i) = ddsdde(i,i) + MuLame2d
+    END DO
+    !
+    ! We have a linear response function, so the following update is precise
+    ! (no higher-order terms related to the notion of differentiability).
+    ! Note that we could also define
+    !
+    !        stress = stress_response_function(stran + dstran)
+    ! or
+    !        stress = stress_response_function(dfrgrd1)
+    !
+    ! which may be the precise definition of the functionality required. 
+    stress = stress + MATMUL(ddsdde,dstran)
+    ! So, for this model, the other way to return the stress:
+    !stress = MATMUL(ddsdde,stran+dstran)
+    case(6)
     Emat = 0.0
     Emat(1,1) = 1./Ex
     Emat(1,2) = -1.*nu/Ex
@@ -201,7 +235,8 @@
    MuLame(4) = Ew(4,4)/ (2.0d0 * (1.0d0 + nu))
    MuLame(5) = Ew(5,5)/ (2.0d0 * (1.0d0 + nu))
    MuLame(6) = Ew(6,6)/ (2.0d0 * (1.0d0 + nu))
-   ddsdde = LambdaLame
+ddsdde = 0.0d0
+   ddsdde(1:ndi,1:ndi) = LambdaLame
    DO i=1,ntens
       ddsdde(i,i) = ddsdde(i,i) + MuLame(i)
     END DO
@@ -210,6 +245,7 @@
    END DO
 ! Calculate invariants for statev
 !
+end select
 Select case(ntens)
      case(4) 
      mises = sqrt(stress(1)**2-stress(1)*stress(2)+stress(2)**2+3.*stress(4)**2)
