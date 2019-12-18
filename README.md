@@ -1,7 +1,7 @@
 # UMATLIB
 
 myUMATlib.F90 combines all of the material models
-see mymateriallib for descriptions
+see materialLIBS for descriptions
 
 UMAT LIB for Elmer. 
 UMAT files for use in Elmer ElasticSolver.F90.
