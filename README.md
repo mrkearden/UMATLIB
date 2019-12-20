@@ -12,13 +12,10 @@ UMAT files for use in Elmer ElasticSolver.F90.
 Works with Elmer ElasticSolver.
 ElasticSolver has now been modified to output state variables to vtu file.
 UMATbi-linear is used with ElasticSolver and calculates invariants and puts them into state variables for output to vtu.
-See example in cut test case.  Added ultimate stress for perfectly plastic behavior.
-
-PlasticSolver in this repository can be used in place of elasticsolver, Plastic Solver is the same but outputs a file called output.txt
-That has prinipal stress and mises for one element and one NPT chosen by the sif input.
+See example in cut test case.  Added ultimate strain for perfectly plastic behavior.
 
 The binary plastic model is input with two sets of strain-stress points yeild is assumed at the first point
-after yielding the stiffness is the slope of the second point relative to the first, Fifth entry is ultimate stress.
+after yielding the stiffness is the slope of the second point relative to the first, Fifth entry is ultimate strain.
 
 Example
 
