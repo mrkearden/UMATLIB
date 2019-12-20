@@ -1042,9 +1042,9 @@
     REAL(KIND=dp) :: nu, E1, E2, LambdaLame, MuLame, G, G1, G2, E
     LOGICAL :: exists,f1exist,f2exist
     REAl(KIND=dp) :: mises, term1, term2, term3, term4, eprinmax, eprinmin
-    REAL(KIND=dp) :: eprinmid,sprinmax,sprinmid,sprinmin
+    REAL(KIND=dp) :: eprinmid,sprinmax,sprinmid,sprinmin, mises1
     real(kind=dp) :: strain1,stressc1,strain2,stressc2,term
-    REAL(KIND=dp) :: totstran(ntens)
+    REAL(KIND=dp) :: totstran(ntens), astress(6)
     Real*8 AA(3,3), ZZ(3,3)
     integer :: i
 !------------------------------------------------------------------------------
@@ -1063,27 +1063,23 @@
     stressc2 = Props(5)
     
 !
-! check mises
+! check mises1
 E=E1
+totstran = stran + dstran
 !
 if (ntens.eq.4) then
- mises = sqrt(stress(1)**2-stress(1)*stress(2)+stress(2)**2+3.*stress(4)**2)
-     term1=stress(1)-stress(2) 
-     term2 = (0.5*term1)**2
-     term3 = (stress(4))**2
-     sprinmax = term1+sqrt(term2+term3)
-     sprinmin = term1-sqrt(term2+term3)
+ mises1 = sqrt(totstran(1)**2-totstran(1)*totstran(2)+totstran(2)**2+3.*totstran(4)**2)
 end if
 if (ntens.eq.6) then
- term1=(stress(1)-stress(2))**2
- term2=(stress(2)-stress(3))**2
- term3=(stress(3)-stress(1))**2
- term4=6.0*(stress(4)**2+stress(5)**2+stress(6)**2)
- mises=sqrt((term1+term2+term3+term4)/2)
+ term1=(totstran(1)-totstran(2))**2
+ term2=(totstran(2)-totstran(3))**2
+ term3=(totstran(3)-totstran(1))**2
+ term4=6.0*(totstran(4)**2+totstran(5)**2+totstran(6)**2)
+ mises1=sqrt((term1+term2+term3+term4)/2)
 endif
 !
 !
-if (mises.gt.props(3)) then
+if (mises1.ge.props(2)) then
 !
      E = E2   
      
@@ -1092,7 +1088,7 @@ else
     E = E1
      
 end if 
-if (mises.gt.props(6)) then
+if (mises1.ge.props(6)) then
   E = 0.0
 end if
 !
@@ -1110,7 +1106,7 @@ LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
     END DO
    stress = stress + MATMUL(ddsdde,dstran)
    totstran = stran + dstran
-!
+
 ! Calculate invariants for statev
 !
 Select case(ntens)
@@ -1383,28 +1379,23 @@ Select case(ntens)
     strain2 = Props(4)
     stressc2 = Props(5)
     
-!
 ! check mises
 E=E1
+totstran = stran + dstran
 !
 if (ntens.eq.4) then
- mises = sqrt(stress(1)**2-stress(1)*stress(2)+stress(2)**2+3.*stress(4)**2)
-     term1=stress(1)-stress(2) 
-     term2 = (0.5*term1)**2
-     term3 = (stress(4))**2
-     sprinmax = term1+sqrt(term2+term3)
-     sprinmin = term1-sqrt(term2+term3)
+ mises = sqrt(totstran(1)**2-totstran(1)*totstran(2)+totstran(2)**2+3.*totstran(4)**2)
 end if
 if (ntens.eq.6) then
- term1=(stress(1)-stress(2))**2
- term2=(stress(2)-stress(3))**2
- term3=(stress(3)-stress(1))**2
- term4=6.0*(stress(4)**2+stress(5)**2+stress(6)**2)
+ term1=(totstran(1)-totstran(2))**2
+ term2=(totstran(2)-totstran(3))**2
+ term3=(totstran(3)-totstran(1))**2
+ term4=6.0*(totstran(4)**2+totstran(5)**2+totstran(6)**2)
  mises=sqrt((term1+term2+term3+term4)/2)
 endif
 !
 !
-if (mises.gt.props(3)) then
+if (mises.ge.props(2)) then
 !
      E = E2   
      
@@ -1413,7 +1404,7 @@ else
     E = E1
      
 end if 
-if (mises.gt.props(6)) then
+if (mises.ge.props(6)) then
   E = 0.0
 end if
 !
