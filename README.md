@@ -1,5 +1,7 @@
 # UMATLIB
 
+umat_tests.zip are the test files for myUMATlib.F90
+
 myUMATlib.F90 combines all of the material models
 see materialLIBS for descriptions
 
@@ -31,16 +33,28 @@ integration point to write -1 =all
 
 Example in the test cases
 Material 1
+
 Name = "Material 1"
+
 !  Poisson ratio = 0.3
+
 !  Youngs modulus = 2.85E7
-Number of Material Constants = Integer 8
-Number of State Variables = Integer 0
-! List material constants as {poisson strain1 stress1 strain2 stress2,
-!  write output 1 is yes element to write -1=all npt -1=all}:
-Material Constants(8) = Real 0.3 0.002 57000. 0.162 63025. 1.0 901.0 5.0
+
+Number of Material Constants = Integer 6
+
+Number of State Variables = Integer 7
+
+! List material constants as {poisson strain1 stress1 strain2 stress2, ultimate strain
+
+Material Constants(6) = Real 0.3 0.002 57000. 0.162 63025. .25
+
 Density = 1.0
+
 Reference Temperature = 293.0
-UMAT Subroutine = File "UMATmises" "mises_yield"
-Name = "mises_yield"  ! This specifies the CMNAME argument of UMAT
+
+UMAT Subroutine = File "myUMATLib" "bi_linear"
+
+Name = "bi_linear"  ! This specifies the CMNAME argument of UMAT
+
 End
+
