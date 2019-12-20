@@ -11,8 +11,8 @@ UMAT files for use in Elmer ElasticSolver.F90.
   UMATmises_yield.F90 (works for 2D and 3D elements) checks the mises stress for yielding using the first pair of stress strain points
 Works with Elmer ElasticSolver.
 ElasticSolver has now been modified to output state variables to vtu file.
-UMATbi-linear is used with ElasticSolver and calculates invariants and puts them into state variables for output to vtu.
-See example in cut test case.  Added ultimate strain for perfectly plastic behavior.
+UMAT is used with ElasticSolver and calculates invariants and puts them into state variables for output to vtu.
+See example in umat_tests.zip.  Added ultimate strain for perfectly plastic behavior.
 
 The binary plastic model is input with two sets of strain-stress points yeild is assumed at the first point
 after yielding the stiffness is the slope of the second point relative to the first, Fifth entry is ultimate strain.
@@ -23,10 +23,7 @@ Example
 
 has a yield of 57000 at a strain 0f 0.002 E=28.5E7 then E=3.89E5 after that
 
-full input constants are poisson ratio,strain1,stress1,strain2,stress2,write flag
-1=yes anything else is no, element to write -1=all elements
-integration point to write -1 =all
-
+full input constants are poisson ratio,strain1,stress1,strain2,stress2,ultimate strain
 
 Example in the test cases
 Material 1
