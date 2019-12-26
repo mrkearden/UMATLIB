@@ -1044,7 +1044,7 @@
     REAl(KIND=dp) :: mises, term1, term2, term3, term4, eprinmax, eprinmin
     REAL(KIND=dp) :: eprinmid,sprinmax,sprinmid,sprinmin, mises1
     real(kind=dp) :: strain1,stressc1,strain2,stressc2,term
-    REAL(KIND=dp) :: totstran(ntens), astress(6)
+    REAL(KIND=dp) :: totstran(ntens), astress(6), prevstran(ntens)
     Real*8 AA(3,3), ZZ(3,3)
     integer :: i
 !------------------------------------------------------------------------------
@@ -1066,27 +1066,29 @@
 ! check mises1
 E=E1
 totstran = stran + dstran
+prevstran = stran - dstran
 !
 if (ntens.eq.4) then
- mises1 = sqrt(totstran(1)**2-totstran(1)*totstran(2)+totstran(2)**2+3.*totstran(4)**2)
+ mises1 = sqrt(stran(1)**2-stran(1)*stran(2)+stran(2)**2+3.*stran(4)**2)
+! mises = sqrt(totstran(1)**2-totstran(1)*totstran(2)+totstran(2)**2+3.*totstran(4)**2)
 end if
 if (ntens.eq.6) then
- term1=(totstran(1)-totstran(2))**2
- term2=(totstran(2)-totstran(3))**2
- term3=(totstran(3)-totstran(1))**2
- term4=6.0*(totstran(4)**2+totstran(5)**2+totstran(6)**2)
- mises1=sqrt((term1+term2+term3+term4)/2)
+ term1=(stran(1)-stran(2))**2
+ term2=(stran(2)-stran(3))**2
+ term3=(stran(3)-stran(1))**2
+ term4=3.0*(stran(4)**2+stran(5)**2+stran(6)**2)
+ mises1=sqrt( ((term1+term2+term3)/2)+term4 )
 endif
 !
 !
 if (mises1.ge.props(2)) then
 !
-     E = E2   
-     
-else
-     
-    E = E1
-     
+  E = E2
+!else
+!   if (mises.gt.props(2)) then
+!    write(20,fmt='(f8.6,a7,f8.6,a8,f8.6)') props(2)," stran ",mises1," totstra ",mises
+!    E=E1*0.85
+!   endif       
 end if 
 if (mises1.ge.props(6)) then
   E = 0.0
@@ -1133,8 +1135,8 @@ Select case(ntens)
      term1=(stress(1)-stress(2))**2
     term2=(stress(2)-stress(3))**2
     term3=(stress(3)-stress(1))**2
-    term4=6.0*(stress(4)**2+stress(5)**2+stress(6)**2)
-    mises=sqrt(term1+term2+term3+term4)
+    term4=3.0*(stress(4)**2+stress(5)**2+stress(6)**2)
+    mises=sqrt( ((term1+term2+term3)/2)+term4 )
     AA(1,1)=stress(1)
     AA(2,2)=stress(2)
     AA(3,3)=stress(3)
@@ -1314,7 +1316,53 @@ Select case(ntens)
     REAL(KIND=dp) :: totstran(ntens)
     Real*8 AA(3,3), ZZ(3,3)
 !------------------------------------------------------------------------------
+! Get Young's modulus and the Poisson ratio:
+    E1 = Props(3)/Props(2)
+    E2 = (Props(5)-Props(3))/(Props(4)-Props(2))
+    
+    nu = Props(1)
 
+    G1 = E1/(2*(1+nu))
+    G2 = E2/(2*(1+nu))
+
+    strain1 = Props(2)
+    stressc1 = Props(3)
+    strain2 = Props(4)
+    stressc2 = Props(5)
+    
+!
+! check mises
+E=E1
+!
+if (ntens.eq.4) then
+ mises = sqrt(stran(1)**2-stran(1)*stran(2)+stran(2)**2+3.*stran(4)**2)
+end if
+if (ntens.eq.6) then
+ term1=(stran(1)-stran(2))**2
+ term2=(stran(2)-stran(3))**2
+ term3=(stran(3)-stran(1))**2
+ term4=3.0*(stran(4)**2+stran(5)**2+stran(6)**2)
+ mises=sqrt( ((term1+term2+term3)/2)+term4 )
+endif
+!
+!
+if (mises.gt.props(2)) then
+!
+     E = E2   
+     
+else
+     
+    E = E1
+     
+end if 
+if (mises.gt.props(6)) then
+  E = 0.0
+end if
+!if (time(1).gt.0.0 .and. noel.eq.550) then
+!
+!write(20,fmt='(a3,Es13.6,a5,F4.2,1x,es13.6,1x,es13.6)') "E= ",E," nu= ",nu,props(3),mises
+!
+!end if
     SymBasis(1,1:3,1:3) = RESHAPE((/ 1,0,0,0,0,0,0,0,0 /),(/ 3,3 /))
     SymBasis(2,1:3,1:3) = RESHAPE((/ 0,0,0,0,1,0,0,0,0 /),(/ 3,3 /))
     SymBasis(3,1:3,1:3) = RESHAPE((/ 0,0,0,0,0,0,0,0,1 /),(/ 3,3 /)) 
@@ -1365,50 +1413,7 @@ Select case(ntens)
         Dfrgrd1(1,2) * ( Dfrgrd1(2,3)*Dfrgrd1(3,1) - Dfrgrd1(2,1)*Dfrgrd1(3,3) ) + &
         Dfrgrd1(1,3) * ( Dfrgrd1(2,1)*Dfrgrd1(3,2) - Dfrgrd1(2,2)*Dfrgrd1(3,1) )
 
-     ! Get Young's modulus and the Poisson ratio:
-    E1 = Props(3)/Props(2)
-    E2 = (Props(5)-Props(3))/(Props(4)-Props(2))
-    
-    nu = Props(1)
-
-    G1 = E1/(2*(1+nu))
-    G2 = E2/(2*(1+nu))
-
-    strain1 = Props(2)
-    stressc1 = Props(3)
-    strain2 = Props(4)
-    stressc2 = Props(5)
-    
-! check mises
-E=E1
-totstran = stran + dstran
-!
-if (ntens.eq.4) then
- mises = sqrt(totstran(1)**2-totstran(1)*totstran(2)+totstran(2)**2+3.*totstran(4)**2)
-end if
-if (ntens.eq.6) then
- term1=(totstran(1)-totstran(2))**2
- term2=(totstran(2)-totstran(3))**2
- term3=(totstran(3)-totstran(1))**2
- term4=6.0*(totstran(4)**2+totstran(5)**2+totstran(6)**2)
- mises=sqrt((term1+term2+term3+term4)/2)
-endif
-!
-!
-if (mises.ge.props(2)) then
-!
-     E = E2   
-     
-else
-     
-    E = E1
-     
-end if 
-if (mises.ge.props(6)) then
-  E = 0.0
-end if
-!
-    
+   
     LambdaLame = E * nu / ( (1.0d0+nu) * (1.0d0-2.0d0*nu) )
     MuLame = E / (2.0d0 * (1.0d0 + nu))
 
@@ -1454,19 +1459,19 @@ end if
     ! The Cauchy stress tensor:
     Sigma = 1.0d0/DetDefG * MATMUL(dfrgrd1, MATMUL(S,TRANSPOSE(dfrgrd1)))
 
-    DO i=1,ndi
-      Stress(i) = Sigma(i,i)
-    END DO
-    DO i=1,nshr
-      SELECT CASE(i)
-      CASE(1)
-        Stress(ndi+i) = Sigma(1,2)
-      CASE(2)
-        Stress(ndi+i) = Sigma(1,3)
-      CASE(3)
-        Stress(ndi+i) = Sigma(2,3)
-      END SELECT
-    END DO
+!    DO i=1,ndi
+!      Stress(i) = Sigma(i,i)
+!    END DO
+!    DO i=1,nshr
+!      SELECT CASE(i)
+!      CASE(1)
+!        Stress(ndi+i) = Sigma(1,2)
+!      CASE(2)
+!        Stress(ndi+i) = Sigma(1,3)
+!      CASE(3)
+!        Stress(ndi+i) = Sigma(2,3)
+!      END SELECT
+!    END DO
 
     ! The derivative: The part corresponding to lambda * tr(E) I
     ddsdde = 0.0d0
@@ -1522,6 +1527,7 @@ end if
       END DO
     END DO
 !
+    stress = stress + MATMUL(ddsdde,dstran)
 ! Calculate invariants for statev
 !
 Select case(ntens)
@@ -1545,11 +1551,11 @@ Select case(ntens)
      statev(6) = sprinmin
      statev(7) = mises
      case(6)
-     term1=(stress(1)-stress(2))**2
-    term2=(stress(2)-stress(3))**2
-    term3=(stress(3)-stress(1))**2
-    term4=6.0*(stress(4)**2+stress(5)**2+stress(6)**2)
-    mises=sqrt(term1+term2+term3+term4)
+      term1=(stress(1)-stress(2))**2
+      term2=(stress(2)-stress(3))**2
+      term3=(stress(3)-stress(1))**2
+      term4=3.0*(stress(4)**2+stress(5)**2+stress(6)**2)
+       mises=sqrt( ((term1+term2+term3)/2)+term4 )
     AA(1,1)=stress(1)
     AA(2,2)=stress(2)
     AA(3,3)=stress(3)
@@ -1860,8 +1866,8 @@ Select case(ntens)
     term1=(stress(1)-stress(2))**2
     term2=(stress(2)-stress(3))**2
     term3=(stress(3)-stress(1))**2
-    term4=6.0*(stress(4)**2+stress(5)**2+stress(6)**2)
-    mises=sqrt( (term1+term2+term3+term4)/2 )
+    term4=3.0*(stress(4)**2+stress(5)**2+stress(6)**2)
+    mises=sqrt( ((term1+term2+term3)/2)+term4 )
     AA(1,1)=stress(1)
     AA(2,2)=stress(2)
     AA(3,3)=stress(3)
