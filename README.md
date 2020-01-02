@@ -1,5 +1,6 @@
 # UMATLIB
 
+added plastic subroutine
 umat_tests.zip are the test files for myUMATlib.F90
 
 myUMATlib.F90 combines all of the material models
