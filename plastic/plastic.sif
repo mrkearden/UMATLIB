@@ -1,0 +1,103 @@
+Header
+  CHECK KEYWORDS Warn
+  Mesh DB "." "."
+  Include Path ""
+  Results Directory ""
+End
+
+Simulation
+  Max Output Level = 5
+  Coordinate System = Cartesian 2D
+  Coordinate Scaling = 10.0
+!  Simulation Type = Steady State
+  Simulation Type = Scanning 
+  Timestep Intervals = 80
+  Timestep Sizes =.025
+  Steady State Max Iterations = 1
+  Steady State Min Iterations = 1
+  Output Intervals = 1
+! Output File = "elasticity.result"
+ Post File = "bilinear.vtu"
+End
+
+Constants
+  Gravity(4) = 0 -1 0 9.82
+  Stefan Boltzmann = 5.67e-08
+  Permittivity of Vacuum = 8.8542e-12
+  Boltzmann Constant = 1.3807e-23
+  Unit Charge = 1.602e-19
+End
+
+Body 1
+  Target Bodies(1) = 2
+  Name = "Body 1"
+  Equation = 1
+  Material = 1
+End
+
+Material 1
+
+! UMAT test
+  Number of Material Constants = Integer 9
+  Number of State Variables = Integer 7
+  ! List material constants as {}:
+  Material Constants(9) = Real .3 0.001428 1.0E8 .0025 1.18E8 .004 1.3E8 .007 1.35E8 
+  Density = 1.0
+  Reference Temperature = 293.0
+  UMAT Subroutine = File "myUMATLib" "plastic"
+  Name = "plastic"  ! This specifies the CMNAME argument of UMAT
+!
+End
+
+Solver 1
+  Equation = Nonlinear elasticity
+  Calculate Stresses = True
+  Calculate Strains = True
+  Calculate Principal = True
+  Variable = -dofs 2 Displacement
+  Procedure = "ElasticSolve" "ElasticSolver"
+  Exec Solver = Always
+  Stabilize = True
+  Bubbles = False
+  Lumped Mass Matrix = False
+  Optimize Bandwidth = True
+  Steady State Convergence Tolerance = 1.0e-5
+  Nonlinear System Convergence Tolerance = 1.0e-5
+  Nonlinear System Max Iterations = 20
+  Nonlinear System Newton After Iterations = 3
+  Nonlinear System Newton After Tolerance = 1.0e-3
+  Nonlinear System Relaxation Factor = 1
+  Linear System Solver = Iterative
+  Linear System Iterative Method = BiCGStab
+  Linear System Max Iterations = 1500
+  Linear System Convergence Tolerance = 1.0e-9
+  BiCGstabl polynomial degree = 2
+  Linear System Preconditioning = ILU0
+  Linear System ILUT Tolerance = 1.0e-3
+  Linear System Abort Not Converged = False
+  Linear System Residual Output = 10
+  Linear System Precondition Recompute = 1
+  Output State Variables = True
+  Displace Mesh = True
+End
+
+
+Equation 1
+  Active Solvers(1) = 1
+  Plane Stress = False
+End
+
+Boundary Condition 1
+  Target Boundaries(1) = 1
+  Name = "fixed"
+   Displacement 1 = Variable "time"; Real MATC "-.018*tx"
+   Displacement 2 = 0
+End
+
+Boundary Condition 2
+  Target Boundaries(1) = 2 
+  Name = "move"
+  Displacement 1 = Variable "time"; Real MATC ".018*tx"
+  Displacement 2 = 0
+End
+
