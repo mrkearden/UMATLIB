@@ -3,7 +3,7 @@
 ! *  Email:   mika.malinen@csc.fi
 ! *  Original Date: March 8, 2019
 !
-
+! Other Subroutines added by Kevin Arden
 !------------------------------------------------------------------------------
 ! The template for including a material model definition written in the form of
 ! an Abaqus user subroutine (UMAT). The arguments which can be supposed to be 
