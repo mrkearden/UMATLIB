@@ -1,0 +1,45 @@
+linear_isotropic
+
+small strain 3 material constants density nu E
+
+hencky_stvenant_kirchhoff
+
+large strain 3 material constants density nu E
+
+stvenant_kirchhoff
+
+large strain 3 material constants density nu E
+
+bi_linear 
+
+small strain 6 material constants nu strain1, stress1, strain2, stress2, ultimate strain
+seven state vatiables max strain, mid strain, min strain,
+ max principal, mid principal, min principle, mises
+
+bi-linear stress strain curve, ultimate stress at final strain value
+
+hsk_bi
+
+large strain 6 material constants nu strain1, stress1, strain2, stress2, ultimate strain
+seven state vatiables max strain, mid strain, min strain,
+ max principal, mid principal, min principle, mises
+
+bi-linear stress strain curve, ultimate stress at final strain value
+
+ortho
+
+orthotropic small strain 4 material constants nu Ex Ey Ez
+seven state vatiables max strain, mid strain, min strain,
+ max principal, mid principal, min principle, mises
+2D defaults to linear isotropic
+
+plastic
+
+non-linear material using piecewise curve.  Stress strain curve is a series of points x,y where x is strain and y is stress.  
+
+material constants is (number of points * 2) plus 1.
+nu, x1,y1, x2,y2 ,x3,y3, etc.
+seven state vatiables max strain, mid strain, min strain,
+ max principal, mid principal, min principle, mises
+
+
