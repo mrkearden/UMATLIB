@@ -41,5 +41,5 @@ material constants is (number of points * 2) plus 1.
 nu, x1,y1, x2,y2 ,x3,y3, etc.
 seven state vatiables max strain, mid strain, min strain,
  max principal, mid principal, min principle, mises
-
+see test case in plastic folder
 
